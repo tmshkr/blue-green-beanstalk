@@ -1,0 +1,30 @@
+name: "Get Target Elastic Beanstalk Environment"
+description: "GitHub Action that outputs the name of the staging environment for an AWS Elastic Beanstalk Blue/Green deployment. If the staging environment is not healthy, it will terminate and recreate it with the given template."
+inputs:
+  app_name:
+    description: "Name of the Elastic Beanstalk application"
+    required: true
+  aws_access_key_id:
+    description: "AWS Access Key ID"
+    required: true
+  aws_secret_access_key:
+    description: "AWS Secret Access Key"
+    required: true
+  blue_env:
+    description: "Name of the Blue environment"
+    required: true
+  green_env:
+    description: "Name of the Green environment"
+    required: true
+  region:
+    description: "AWS region"
+    required: true
+  template_name:
+    description: "Name of the Elastic Beanstalk template"
+    required: true
+outputs:
+  target_env:
+    description: "The name of the target environment, to which the new application version should be deployed"
+runs:
+  using: "node20"
+  main: "dist/index.js"
