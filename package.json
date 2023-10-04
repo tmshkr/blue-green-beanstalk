@@ -1,7 +1,7 @@
 {
   "name": "eb-get-target-env",
   "description": "",
-  "main": "index.ts",
+  "main": "src/index.ts",
   "scripts": {
     "build": "ncc build -o dist",
     "test": "echo \"Error: no test specified\" && exit 1"

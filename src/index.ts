@@ -8,14 +8,14 @@ import {
 
 const client = new ElasticBeanstalkClient({ region: "us-west-2" });
 
-const run = async () => {
+const creatEnvironment = async () => {
   let startTime = new Date();
   const response = await client.send(
     new CreateEnvironmentCommand({
       ApplicationName: "foo-app",
       TemplateName: "single-instance",
       EnvironmentName: "blue-env",
-      CNAMEPrefix: "bg-example-prod",
+      CNAMEPrefix: "bg-example-staging",
     })
   );
   console.log(response);
@@ -47,4 +47,4 @@ const run = async () => {
   clearTimeout(interval);
 };
 
-run();
+creatEnvironment();
