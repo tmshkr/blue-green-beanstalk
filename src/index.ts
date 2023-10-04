@@ -1,54 +1,31 @@
-import {
-  ElasticBeanstalkClient,
-  CreateEnvironmentCommand,
-  DescribeEventsCommand,
-  ListPlatformVersionsCommand,
-  waitUntilEnvironmentExists,
-} from "@aws-sdk/client-elastic-beanstalk";
+if (!process.env.GITHUB_ACTIONS) {
+  require("dotenv").config();
+}
+import * as core from "@actions/core";
+import { ElasticBeanstalkClient } from "@aws-sdk/client-elastic-beanstalk";
+import { createEnvironment } from "./createEnvironment";
 
-const client = new ElasticBeanstalkClient({
+export const client = new ElasticBeanstalkClient({
   region: "us-west-2",
   // logger: console,
 });
 
-const creatEnvironment = async (envName: string) => {
-  let startTime = new Date();
-  const response = await client.send(
-    new CreateEnvironmentCommand({
-      ApplicationName: "foo-app",
-      TemplateName: "single-instance",
-      EnvironmentName: envName,
-      CNAMEPrefix: "bg-example-prod",
-    })
-  );
-  console.log(response);
+const appName = core.getInput("app_name", { required: true });
+const blueEnv = core.getInput("blue_env", { required: true });
+const greenEnv = core.getInput("green_env", { required: true });
+const productionCNAME = core.getInput("production_cname", { required: true });
+const stagingCNAME = core.getInput("staging_cname", { required: true });
+const templateName = core.getInput("template_name", { required: true });
 
-  const interval = setInterval(async () => {
-    let { Events } = await client.send(
-      new DescribeEventsCommand({
-        EnvironmentId: response.EnvironmentId,
-        StartTime: startTime,
-      })
-    );
+function getTargetEnv() {
+  console.log({
+    appName,
+    blueEnv,
+    greenEnv,
+    productionCNAME,
+    stagingCNAME,
+    templateName,
+  });
+}
 
-    Events = Events.filter((event) => event.EventDate > startTime);
-    if (Events.length > 0) {
-      startTime = Events[0].EventDate;
-      for (const e of Events.reverse()) {
-        console.log(
-          `${e.EventDate.toISOString()} - ${e.Severity} - ${e.Message}`
-        );
-      }
-    } else {
-      console.log(".");
-    }
-  }, 5000);
-
-  await waitUntilEnvironmentExists(
-    { client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
-    { EnvironmentIds: [response.EnvironmentId] }
-  );
-  clearInterval(interval);
-};
-
-creatEnvironment("green-env");
+getTargetEnv();
