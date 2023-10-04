@@ -35,7 +35,7 @@ inputs:
     description: "Name of the Elastic Beanstalk template"
     required: true
   wait_for_create_env:
-    description: "Whether to wait for the target environment to become healthy"
+    description: "Whether to wait for the target environment to become healthy after creation. If set to false, the action will terminate immediately after starting the createEnvironment process."
     required: true
 outputs:
   target_env:
