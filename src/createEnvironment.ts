@@ -7,14 +7,20 @@ import {
 
 import { client } from "./index";
 
-export async function createEnvironment(envName: string) {
+export async function createEnvironment(
+  appName: string,
+  cname: string,
+  envName: string,
+  waitForCreateEnv: boolean,
+  templateName: string
+) {
   let startTime = new Date();
   const response = await client.send(
     new CreateEnvironmentCommand({
-      ApplicationName: "foo-app",
-      TemplateName: "single-instance",
+      ApplicationName: appName,
+      TemplateName: templateName,
       EnvironmentName: envName,
-      CNAMEPrefix: "bg-example-prod",
+      CNAMEPrefix: cname,
     })
   );
   console.log(response);
