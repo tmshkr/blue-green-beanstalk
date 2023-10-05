@@ -1,6 +1,7 @@
 import {
   DescribeEnvironmentsCommand,
   waitUntilEnvironmentExists,
+  waitUntilEnvironmentTerminated,
   EnvironmentDescription,
 } from "@aws-sdk/client-elastic-beanstalk";
 import { client, Inputs } from "./index";
@@ -43,14 +44,24 @@ export async function getTargetEnv(
     return await createStagingEnvironment();
   }
 
-  if (stagingEnv.Status !== "Ready") {
-    console.log("Staging environment is not ready. Waiting for it...");
+  if (stagingEnv.Status === "Terminating") {
+    console.log("Staging environment is terminating. Waiting...");
+    const interval = setDescribeEventsInterval(stagingEnv.EnvironmentId);
+    await waitUntilEnvironmentTerminated(
+      { client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
+      { EnvironmentIds: [stagingEnv.EnvironmentId] }
+    );
+    clearInterval(interval);
+    return getTargetEnv(inputs);
+  } else if (stagingEnv.Status !== "Ready") {
+    console.log("Staging environment is not ready. Waiting...");
     const interval = setDescribeEventsInterval(stagingEnv.EnvironmentId);
     await waitUntilEnvironmentExists(
       { client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
       { EnvironmentIds: [stagingEnv.EnvironmentId] }
     );
     clearInterval(interval);
+    return getTargetEnv(inputs);
   }
 
   if (stagingEnv.Health !== "Green") {
