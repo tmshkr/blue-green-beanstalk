@@ -6,9 +6,10 @@ import { client } from "./index";
 import { setDescribeEventsInterval } from "./setDescribeEventsInterval";
 
 export async function terminateEnvironment(
-  environmentId: string
+  environmentId: string,
+  environmentName: string
 ): Promise<void> {
-  console.log(`Terminating environment ${environmentId}...`);
+  console.log(`Terminating environment ${environmentId} ${environmentName}...`);
   const startTime = new Date();
   await client.send(
     new TerminateEnvironmentCommand({

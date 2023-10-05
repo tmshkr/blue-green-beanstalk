@@ -30,9 +30,10 @@ export const client = new ElasticBeanstalkClient({
 });
 
 async function run() {
+  console.log({ inputs });
   await handleApplication(inputs);
   const targetEnv = await getTargetEnv(inputs);
+  console.log({ targetEnv });
 }
 
-console.log(inputs);
 run();

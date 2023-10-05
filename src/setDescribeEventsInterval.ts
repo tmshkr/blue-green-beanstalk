@@ -18,7 +18,7 @@ export function setDescribeEventsInterval(
       startTime = Events[0].EventDate;
       for (const e of Events.reverse()) {
         console.log(
-          `${printUTCTime(e.EventDate)} ${e.Severity} - ${e.EnvironmentName}: ${
+          `${printUTCTime(e.EventDate)} ${e.Severity} ${e.EnvironmentName}: ${
             e.Message
           }`
         );

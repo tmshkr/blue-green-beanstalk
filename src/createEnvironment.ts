@@ -40,7 +40,7 @@ export async function createEnvironment({
   waitForCreateEnv?: boolean;
 }) {
   const startTime = new Date();
-  const response = await client.send(
+  const newEnv = await client.send(
     new CreateEnvironmentCommand({
       ApplicationName: appName,
       TemplateName: templateName || undefined,
@@ -50,12 +50,15 @@ export async function createEnvironment({
       OptionSettings: templateName ? undefined : defaultOptionSettings,
     })
   );
-  console.log(response);
+  console.log(
+    `Creating environment ${newEnv.EnvironmentId} ${newEnv.EnvironmentName}...`
+  );
 
-  const interval = setDescribeEventsInterval(response.EnvironmentId, startTime);
+  const interval = setDescribeEventsInterval(newEnv.EnvironmentId, startTime);
   await waitUntilEnvironmentExists(
     { client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
-    { EnvironmentIds: [response.EnvironmentId] }
+    { EnvironmentIds: [newEnv.EnvironmentId] }
   );
   clearInterval(interval);
+  return newEnv;
 }
