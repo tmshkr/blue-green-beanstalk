@@ -4,6 +4,7 @@ if (!process.env.GITHUB_ACTIONS) {
 import * as core from "@actions/core";
 import { ElasticBeanstalkClient } from "@aws-sdk/client-elastic-beanstalk";
 import { getTargetEnv } from "./getTargetEnv";
+import { handleApplication } from "./handleApplication";
 
 const inputs = {
   appName: core.getInput("app_name", { required: true }),
@@ -29,8 +30,7 @@ export const client = new ElasticBeanstalkClient({
 });
 
 async function run() {
-  // check if the app exists
-  // if not, create it
+  await handleApplication(inputs);
   const targetEnv = await getTargetEnv(inputs);
 }
 
