@@ -24,7 +24,7 @@ inputs:
     description: "Name of the Green environment"
     required: true
   platform_branch_name:
-    description: "The name of the platform branch to use when creating a new environment, so that the latest version of the platform branch will be used. To see the list of available platform branches, run the `aws elasticbeanstalk list-platform-branches` command."
+    description: "Name of the platform branch to use. When creating a new environment, it will be launched with the latest version of the specified platform branch. To see the list of available platform branches, run the `aws elasticbeanstalk list-platform-branches` command."
     required: true
   production_cname:
     description: "CNAME prefix of the production environment"
@@ -37,7 +37,7 @@ inputs:
     required: true
     default: true
   template_name:
-    description: "Name of an Elastic Beanstalk template to use when creating a new environment. If not specified, a default array of OptionSettings will be used."
+    description: "Name of an Elastic Beanstalk configuration template to use when creating a new environment. If no template is specified, default option settings will be used."
     required: false
   wait_for_create_env:
     description: "Whether to wait for the target environment to become healthy after creation. If set to false, the action will terminate immediately after starting the createEnvironment process."
