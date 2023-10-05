@@ -1,5 +1,10 @@
 export const defaultOptionSettings = [
   {
+    Namespace: "aws:ec2:instances",
+    OptionName: "InstanceTypes",
+    Value: "t3.micro,t2.micro",
+  },
+  {
     Namespace: "aws:elasticbeanstalk:environment",
     OptionName: "EnvironmentType",
     Value: "SingleInstance",

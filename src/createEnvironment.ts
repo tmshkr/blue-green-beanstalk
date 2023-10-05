@@ -48,7 +48,7 @@ export async function createEnvironment({
       EnvironmentName: envName,
       CNAMEPrefix: cname,
       PlatformArn: await getPlatformArn(platformBranchName),
-      OptionSettings: templateName ? undefined : defaultOptionSettings,
+      OptionSettings: defaultOptionSettings,
     })
   );
   console.log(response);
