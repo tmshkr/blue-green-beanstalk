@@ -22,7 +22,7 @@ const inputs = {
   }),
 };
 
-export type Inputs = typeof inputs;
+export type ActionInputs = typeof inputs;
 
 export const client = new ElasticBeanstalkClient({
   region: inputs.awsRegion,

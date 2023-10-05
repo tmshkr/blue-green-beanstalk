@@ -4,13 +4,13 @@ import {
   waitUntilEnvironmentTerminated,
   EnvironmentDescription,
 } from "@aws-sdk/client-elastic-beanstalk";
-import { client, Inputs } from "./index";
+import { client, ActionInputs } from "./index";
 import { createEnvironment } from "./createEnvironment";
 import { terminateEnvironment } from "./terminateEnvironment";
 import { setDescribeEventsInterval } from "./setDescribeEventsInterval";
 
 export async function getTargetEnv(
-  inputs: Inputs
+  inputs: ActionInputs
 ): Promise<EnvironmentDescription> {
   const { Environments } = await client.send(
     new DescribeEnvironmentsCommand({

@@ -2,9 +2,9 @@ import {
   CreateApplicationCommand,
   DescribeApplicationsCommand,
 } from "@aws-sdk/client-elastic-beanstalk";
-import { client, Inputs } from "./index";
+import { client, ActionInputs } from "./index";
 
-export async function handleApplication(inputs: Inputs) {
+export async function handleApplication(inputs: ActionInputs) {
   const { Applications } = await client.send(
     new DescribeApplicationsCommand({ ApplicationNames: [inputs.appName] })
   );
