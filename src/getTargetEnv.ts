@@ -1,18 +1,59 @@
-import { DescribeEnvironmentsCommand } from "@aws-sdk/client-elastic-beanstalk";
+import {
+  DescribeEnvironmentsCommand,
+  waitUntilEnvironmentExists,
+} from "@aws-sdk/client-elastic-beanstalk";
 import { client, Inputs } from "./index";
+import { createEnvironment } from "./createEnvironment";
+import { terminateEnvironment } from "./terminateEnvironment";
+import { setDescribeEventsInterval } from "./setDescribeEventsInterval";
 
 export async function getTargetEnv(inputs: Inputs): Promise<string> {
-  // check if there is an environment with the productionCNAME
-  const res = await client.send(
-    new DescribeEnvironmentsCommand({ ApplicationName: inputs.appName })
+  const { Environments } = await client.send(
+    new DescribeEnvironmentsCommand({
+      ApplicationName: inputs.appName,
+      EnvironmentNames: [inputs.blueEnv, inputs.greenEnv],
+      IncludeDeleted: false,
+    })
   );
-  console.log(res);
 
-  // if not, create it and return it as the target env
+  const prodEnv = Environments.find((env) =>
+    env.CNAME.startsWith(inputs.productionCNAME)
+  );
+  const stagingEnv = Environments.find((env) =>
+    env.CNAME.startsWith(inputs.stagingCNAME)
+  );
+  const createStagingEnvironment = () =>
+    createEnvironment({
+      appName: inputs.appName,
+      cname: inputs.stagingCNAME,
+      envName:
+        prodEnv?.EnvironmentName === inputs.blueEnv
+          ? inputs.greenEnv
+          : inputs.blueEnv,
+      platformBranchName: inputs.platformBranchName,
+      templateName: inputs.templateName,
+    });
 
-  // check if there is an environment with the stagingCNAME
-  // if so, return it as the target env
-  // or else create the staging environment and return it as the target env
+  console.log(Environments);
+  if (!stagingEnv) {
+    console.log("Staging environment not found. Creating new environment...");
+    await createStagingEnvironment();
+  } else {
+    if (stagingEnv.Status !== "Ready") {
+      console.log("Staging environment is not ready. Waiting for it...");
+      const interval = setDescribeEventsInterval(stagingEnv.EnvironmentId);
+      await waitUntilEnvironmentExists(
+        { client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
+        { EnvironmentIds: [stagingEnv.EnvironmentId] }
+      );
+      clearInterval(interval);
+    }
+    if (stagingEnv.Health !== "Green") {
+      console.log("Staging environment is not healthy.");
+      await terminateEnvironment(stagingEnv.EnvironmentId);
+      await createStagingEnvironment();
+    }
+  }
 
-  return "foo";
+  return "foo-env";
 }

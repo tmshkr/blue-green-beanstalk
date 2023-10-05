@@ -1,8 +1,8 @@
 name: "Blue/Green Beanstalk"
-description: "GitHub Action that automates deployment to AWS Elastic Beanstalk Blue/Green environments. If the staging environment is not healthy, the action will terminate and recreate it with the given template."
+description: "GitHub Action that automates deployment to AWS Elastic Beanstalk Blue/Green environments."
 inputs:
   app_name:
-    description: "Name of the Elastic Beanstalk application"
+    description: "Name of the Elastic Beanstalk application. If it doesn't exist, it will be created."
     required: true
   aws_access_key_id:
     description: "AWS Access Key ID"
@@ -27,10 +27,10 @@ inputs:
     description: "Name of the platform branch to use. When creating a new environment, it will be launched with the latest version of the specified platform branch. To see the list of available platform branches, run the `aws elasticbeanstalk list-platform-branches` command."
     required: true
   production_cname:
-    description: "CNAME prefix of the production environment"
+    description: "CNAME prefix for the production environment"
     required: true
   staging_cname:
-    description: "CNAME prefix of the staging environment"
+    description: "CNAME prefix for the staging environment"
     required: true
   swap_cnames:
     description: "Whether to swap the CNAMEs of the staging and production environments"
