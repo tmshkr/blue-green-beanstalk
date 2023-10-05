@@ -2,18 +2,44 @@ import {
   CreateEnvironmentCommand,
   DescribeEventsCommand,
   ListPlatformVersionsCommand,
+  ListAvailableSolutionStacksCommand,
   waitUntilEnvironmentExists,
 } from "@aws-sdk/client-elastic-beanstalk";
 
 import { client } from "./index";
+import { defaultOptionSettings } from "./config/defaultOptionSettings";
 
-export async function createEnvironment(
-  appName: string,
-  cname: string,
-  envName: string,
-  waitForCreateEnv: boolean,
-  templateName: string
-) {
+async function getPlatformArn(platformBranchName: string) {
+  const { PlatformSummaryList } = await client.send(
+    new ListPlatformVersionsCommand({
+      Filters: [
+        {
+          Type: "PlatformBranchName",
+          Operator: "=",
+          Values: [platformBranchName],
+        },
+      ],
+      MaxRecords: 1,
+    })
+  );
+  return PlatformSummaryList[0].PlatformArn;
+}
+
+export async function createEnvironment({
+  appName,
+  cname,
+  envName,
+  platformBranchName,
+  templateName,
+  waitForCreateEnv,
+}: {
+  appName: string;
+  cname: string;
+  envName: string;
+  platformBranchName: string;
+  templateName?: string;
+  waitForCreateEnv: boolean;
+}) {
   let startTime = new Date();
   const response = await client.send(
     new CreateEnvironmentCommand({
@@ -21,6 +47,8 @@ export async function createEnvironment(
       TemplateName: templateName,
       EnvironmentName: envName,
       CNAMEPrefix: cname,
+      PlatformArn: await getPlatformArn(platformBranchName),
+      OptionSettings: templateName ? undefined : defaultOptionSettings,
     })
   );
   console.log(response);

@@ -9,6 +9,9 @@ const appName = core.getInput("app_name", { required: true });
 const awsRegion = core.getInput("aws_region", { required: true });
 const blueEnv = core.getInput("blue_env", { required: true });
 const greenEnv = core.getInput("green_env", { required: true });
+const platformBranchName = core.getInput("platform_branch_name", {
+  required: true,
+});
 const productionCNAME = core.getInput("production_cname", { required: true });
 const stagingCNAME = core.getInput("staging_cname", { required: true });
 const templateName = core.getInput("template_name", { required: true });
@@ -29,20 +32,21 @@ async function getTargetEnv() {
     greenEnv,
     productionCNAME,
     stagingCNAME,
-    templateName,
+    // templateName,
     waitForCreateEnv,
   });
-  return blueEnv;
+  return greenEnv;
 }
 async function run() {
   const targetEnv = await getTargetEnv();
-  await createEnvironment(
+  await createEnvironment({
     appName,
-    stagingCNAME,
-    targetEnv,
+    cname: stagingCNAME,
+    envName: targetEnv,
+    platformBranchName,
+    // templateName,
     waitForCreateEnv,
-    templateName
-  );
+  });
 }
 
 run();
