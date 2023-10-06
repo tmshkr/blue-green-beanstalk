@@ -1,5 +1,4 @@
 import {
-  ApplicationVersionDescription,
   CreateApplicationVersionCommand,
   CreateStorageLocationCommand,
   DescribeApplicationVersionsCommand,
@@ -13,24 +12,21 @@ const fs = require("fs");
 
 import { client, ActionInputs } from "./index";
 
-export async function handleApplicationVersion(inputs: ActionInputs) {
-  let applicationVersion = await checkApplicationVersion(inputs);
-  if (applicationVersion) {
-    console.log(`Application version ${inputs.versionLabel} already exists.`);
-  } else {
-    applicationVersion = await createApplicationVersion(inputs);
-  }
-  return applicationVersion;
-}
-
-async function checkApplicationVersion(inputs: ActionInputs) {
+export async function getApplicationVersion(inputs: ActionInputs) {
   const { ApplicationVersions } = await client.send(
     new DescribeApplicationVersionsCommand({
       ApplicationName: inputs.appName,
       VersionLabels: [inputs.versionLabel],
     })
   );
-  return ApplicationVersions.length > 0 ? ApplicationVersions[0] : null;
+
+  if (ApplicationVersions.length > 0) {
+    console.log(`Application version ${inputs.versionLabel} already exists.`);
+    return ApplicationVersions[0];
+  }
+
+  const newVersion = await createApplicationVersion(inputs);
+  return newVersion;
 }
 
 async function createApplicationVersion(inputs: ActionInputs) {

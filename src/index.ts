@@ -3,7 +3,7 @@ if (!process.env.GITHUB_ACTIONS) {
 }
 import * as core from "@actions/core";
 import { ElasticBeanstalkClient } from "@aws-sdk/client-elastic-beanstalk";
-import { handleApplicationVersion } from "./handleApplicationVersion";
+import { getApplicationVersion } from "./getApplicationVersion";
 import { getTargetEnv } from "./getTargetEnv";
 
 const inputs = {
@@ -33,7 +33,7 @@ export const client = new ElasticBeanstalkClient({
 
 async function run(inputs: ActionInputs) {
   console.log({ inputs });
-  const applicationVersion = await handleApplicationVersion(inputs);
+  const applicationVersion = await getApplicationVersion(inputs);
   console.log({ applicationVersion });
   return;
   const targetEnv = await getTargetEnv(inputs);
