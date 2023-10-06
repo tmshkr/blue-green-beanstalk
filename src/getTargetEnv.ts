@@ -26,11 +26,12 @@ export async function getTargetEnv(
   const stagingEnv = Environments.find((env) =>
     env.CNAME.startsWith(inputs.stagingCNAME)
   );
+  const targetEnv = prodEnv ? stagingEnv : prodEnv;
 
-  const createStagingEnvironment = () =>
+  const createTargetEnvironment = () =>
     createEnvironment({
       appName: inputs.appName,
-      cname: inputs.stagingCNAME,
+      cname: prodEnv ? inputs.stagingCNAME : inputs.productionCNAME,
       envName:
         prodEnv?.EnvironmentName === inputs.blueEnv
           ? inputs.greenEnv
@@ -39,39 +40,39 @@ export async function getTargetEnv(
       templateName: inputs.templateName,
     });
 
-  if (!stagingEnv) {
-    console.log("Staging environment not found. Creating new environment...");
-    return await createStagingEnvironment();
+  if (!targetEnv) {
+    console.log("Target environment not found. Creating new environment...");
+    return await createTargetEnvironment();
   }
 
-  if (stagingEnv.Status === "Terminating") {
-    console.log("Staging environment is terminating. Waiting...");
-    const interval = setDescribeEventsInterval(stagingEnv.EnvironmentId);
+  if (targetEnv.Status === "Terminating") {
+    console.log("Target environment is terminating. Waiting...");
+    const interval = setDescribeEventsInterval(targetEnv.EnvironmentId);
     await waitUntilEnvironmentTerminated(
       { client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
-      { EnvironmentIds: [stagingEnv.EnvironmentId] }
+      { EnvironmentIds: [targetEnv.EnvironmentId] }
     );
     clearInterval(interval);
     return getTargetEnv(inputs);
-  } else if (stagingEnv.Status !== "Ready") {
-    console.log("Staging environment is not ready. Waiting...");
-    const interval = setDescribeEventsInterval(stagingEnv.EnvironmentId);
+  } else if (targetEnv.Status !== "Ready") {
+    console.log("Target environment is not ready. Waiting...");
+    const interval = setDescribeEventsInterval(targetEnv.EnvironmentId);
     await waitUntilEnvironmentExists(
       { client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
-      { EnvironmentIds: [stagingEnv.EnvironmentId] }
+      { EnvironmentIds: [targetEnv.EnvironmentId] }
     );
     clearInterval(interval);
     return getTargetEnv(inputs);
   }
 
-  if (stagingEnv.Health !== "Green") {
-    console.log("Staging environment is not healthy.");
+  if (targetEnv.Health !== "Green") {
+    console.log("Target environment is not healthy.");
     await terminateEnvironment(
-      stagingEnv.EnvironmentId,
-      stagingEnv.EnvironmentName
+      targetEnv.EnvironmentId,
+      targetEnv.EnvironmentName
     );
-    return await createStagingEnvironment();
+    return await createTargetEnvironment();
   }
 
-  return stagingEnv;
+  return targetEnv;
 }

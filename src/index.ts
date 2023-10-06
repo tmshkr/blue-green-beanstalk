@@ -15,10 +15,10 @@ const inputs = {
     required: true,
   }),
   productionCNAME: core.getInput("production_cname", { required: true }),
-  sourceBundlePath: core.getInput("source_bundle_path", { required: true }),
+  sourceBundlePath: core.getInput("source_bundle_path", { required: false }),
   stagingCNAME: core.getInput("staging_cname", { required: true }),
   templateName: core.getInput("template_name", { required: false }),
-  versionLabel: core.getInput("template_name", { required: true }),
+  versionLabel: core.getInput("version_label", { required: false }),
   waitForCreateEnv: core.getBooleanInput("wait_for_create_env", {
     required: true,
   }),
@@ -33,7 +33,7 @@ export const client = new ElasticBeanstalkClient({
 
 async function run(inputs: ActionInputs) {
   console.log({ inputs });
-  await createApplicationVersion(inputs);
+  // await createApplicationVersion(inputs);
   const targetEnv = await getTargetEnv(inputs);
   console.log({ targetEnv });
   // deploy to the target environment
