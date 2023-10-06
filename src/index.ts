@@ -3,8 +3,8 @@ if (!process.env.GITHUB_ACTIONS) {
 }
 import * as core from "@actions/core";
 import { ElasticBeanstalkClient } from "@aws-sdk/client-elastic-beanstalk";
+import { createApplicationVersion } from "./createApplicationVersion";
 import { getTargetEnv } from "./getTargetEnv";
-import { handleApplication } from "./handleApplication";
 
 const inputs = {
   appName: core.getInput("app_name", { required: true }),
@@ -15,8 +15,10 @@ const inputs = {
     required: true,
   }),
   productionCNAME: core.getInput("production_cname", { required: true }),
+  sourceBundlePath: core.getInput("source_bundle_path", { required: true }),
   stagingCNAME: core.getInput("staging_cname", { required: true }),
   templateName: core.getInput("template_name", { required: false }),
+  versionLabel: core.getInput("template_name", { required: true }),
   waitForCreateEnv: core.getBooleanInput("wait_for_create_env", {
     required: true,
   }),
@@ -29,11 +31,13 @@ export const client = new ElasticBeanstalkClient({
   // logger: console,
 });
 
-async function run() {
+async function run(inputs: ActionInputs) {
   console.log({ inputs });
-  await handleApplication(inputs);
+  await createApplicationVersion(inputs);
   const targetEnv = await getTargetEnv(inputs);
   console.log({ targetEnv });
+  // deploy to the target environment
+  // swap the CNAMEs
 }
 
-run();
+run(inputs);
