@@ -1,5 +1,5 @@
 {
-  "name": "eb-get-target-env",
+  "name": "blue-green-beanstalk",
   "description": "",
   "main": "src/index.ts",
   "scripts": {

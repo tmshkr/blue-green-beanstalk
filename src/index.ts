@@ -5,6 +5,7 @@ import * as core from "@actions/core";
 import { ElasticBeanstalkClient } from "@aws-sdk/client-elastic-beanstalk";
 import { getApplicationVersion } from "./getApplicationVersion";
 import { getTargetEnv } from "./getTargetEnv";
+import { deploy } from "./deploy";
 
 const inputs = {
   appName: core.getInput("app_name", { required: true }),
@@ -35,10 +36,10 @@ async function run(inputs: ActionInputs) {
   console.log({ inputs });
   const applicationVersion = await getApplicationVersion(inputs);
   console.log({ applicationVersion });
-  return;
   const targetEnv = await getTargetEnv(inputs);
   console.log({ targetEnv });
   // deploy to the target environment
+  await deploy(targetEnv, applicationVersion);
   // swap the CNAMEs
 }
 
