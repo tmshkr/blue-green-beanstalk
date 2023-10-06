@@ -5,14 +5,17 @@ inputs:
     description: "Name of the Elastic Beanstalk application. If it doesn't exist, it will be created."
     required: true
   aws_access_key_id:
-    description: "AWS Access Key ID"
+    description: "AWS Access Key ID. May instead be specified via the AWS_ACCESS_KEY_ID environment variable."
     required: true
   aws_region:
-    description: "AWS region"
-    required: true
+    description: "AWS region. May instead be specified via the AWS_REGION environment variable."
+    required: false
   aws_secret_access_key:
-    description: "AWS Secret Access Key"
-    required: true
+    description: "AWS Secret Access Key. May instead be specified via the AWS_SECRET_ACCESS_KEY environment variable."
+    required: false
+  aws_session_token:
+    description: "AWS session token to use when using temporary credentials. May instead be specified via the AWS_SESSION_TOKEN environment variable."
+    required: false
   blue_env:
     description: "Name of the Blue environment"
     required: true
