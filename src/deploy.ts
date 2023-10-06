@@ -13,13 +13,13 @@ export async function deploy(
 ) {
   console.log(`Starting deployment to to ${targetEnv.EnvironmentName}`);
   const startTime = new Date();
-  const res = await client.send(
+  await client.send(
     new UpdateEnvironmentCommand({
       EnvironmentId: targetEnv.EnvironmentId,
       VersionLabel: applicationVersion.VersionLabel,
     })
   );
-  console.log(res);
+
   const interval = setDescribeEventsInterval(
     targetEnv.EnvironmentId,
     startTime
