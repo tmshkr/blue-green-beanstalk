@@ -20,11 +20,15 @@ export async function getTargetEnv(
     })
   );
 
-  const prodEnv = Environments.find((env) =>
-    env.CNAME.startsWith(inputs.productionCNAME)
+  const prodEnv = Environments.find(
+    (env) =>
+      env.CNAME ===
+      `${inputs.productionCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`
   );
-  const stagingEnv = Environments.find((env) =>
-    env.CNAME.startsWith(inputs.stagingCNAME)
+  const stagingEnv = Environments.find(
+    (env) =>
+      env.CNAME ===
+      `${inputs.stagingCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`
   );
   const targetEnv = prodEnv ? stagingEnv : prodEnv;
 
