@@ -27,6 +27,10 @@ const inputs = {
   stagingCNAME: core.getInput("staging_cname", { required: true }),
   swapCNAMES: core.getBooleanInput("swap_cnames", { required: true }),
   templateName: core.getInput("template_name", { required: false }),
+  terminateUnhealthyEnvironment: core.getBooleanInput(
+    "terminate_unhealthy_environment",
+    { required: true }
+  ),
   versionLabel: core.getInput("version_label", { required: true }),
   waitForCreateEnv: core.getBooleanInput("wait_for_create_env", {
     required: true,
@@ -41,9 +45,10 @@ const credentials = {
     inputs.awsSecretAccessKey || process.env.AWS_SECRET_ACCESS_KEY,
   sessionToken: inputs.awsSessionToken || process.env.AWS_SESSION_TOKEN,
 };
-const hasCredentials =
+const hasCredentials = Boolean(
   (credentials.accessKeyId && credentials.secretAccessKey) ||
-  credentials.sessionToken;
+    credentials.sessionToken
+);
 
 export const client = new ElasticBeanstalkClient({
   region: inputs.awsRegion || process.env.AWS_REGION!,
