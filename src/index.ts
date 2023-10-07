@@ -25,9 +25,11 @@ const inputs = {
   }),
   productionCNAME: core.getInput("production_cname", { required: true }),
   sourceBundlePath: core.getInput("source_bundle_path", { required: false }),
-  stagingCNAME: core.getInput("staging_cname", { required: true }),
+  stagingCNAME:
+    core.getInput("staging_cname", { required: false }) || undefined,
   swapCNAMES: core.getBooleanInput("swap_cnames", { required: true }),
-  templateName: core.getInput("template_name", { required: false }),
+  templateName:
+    core.getInput("template_name", { required: false }) || undefined,
   terminateUnhealthyEnvironment: core.getBooleanInput(
     "terminate_unhealthy_environment",
     { required: true }

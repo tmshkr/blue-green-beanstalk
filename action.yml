@@ -34,7 +34,7 @@ inputs:
     required: true
   staging_cname:
     description: "CNAME prefix for the staging environment"
-    required: true
+    required: false
   source_bundle_path:
     description: "Path to the source bundle to deploy. If not specified, the sample application will be used."
     required: false

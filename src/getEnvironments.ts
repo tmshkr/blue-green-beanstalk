@@ -24,8 +24,8 @@ export async function getEnvironments(inputs: ActionInputs): Promise<{
     ),
     stagingEnv: Environments.find(
       (env) =>
-        env.CNAME ===
-        `${inputs.stagingCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`
+        env.CNAME !==
+        `${inputs.productionCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`
     ),
   };
 }

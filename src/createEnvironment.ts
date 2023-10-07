@@ -36,7 +36,7 @@ export async function createEnvironment(
   const newEnv = await client.send(
     new CreateEnvironmentCommand({
       ApplicationName: applicationVersion.ApplicationName,
-      TemplateName: inputs.templateName || undefined,
+      TemplateName: inputs.templateName,
       EnvironmentName:
         prodEnv?.EnvironmentName === inputs.blueEnv
           ? inputs.greenEnv
