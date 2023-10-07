@@ -1,4 +1,5 @@
 import {
+  ApplicationVersionDescription,
   DescribeEnvironmentsCommand,
   waitUntilEnvironmentExists,
   waitUntilEnvironmentTerminated,
@@ -8,9 +9,12 @@ import { client, ActionInputs } from "./index";
 import { createEnvironment } from "./createEnvironment";
 import { terminateEnvironment } from "./terminateEnvironment";
 import { setDescribeEventsInterval } from "./setDescribeEventsInterval";
+import { context } from "@actions/github/lib/utils";
 
 export async function getTargetEnv(
-  inputs: ActionInputs
+  inputs: ActionInputs,
+  applicationVersion: ApplicationVersionDescription,
+  context: { didCreateEnv: boolean }
 ): Promise<EnvironmentDescription> {
   const { Environments } = await client.send(
     new DescribeEnvironmentsCommand({
@@ -32,8 +36,8 @@ export async function getTargetEnv(
   );
   const targetEnv = prodEnv ? stagingEnv : prodEnv;
 
-  const createTargetEnvironment = () =>
-    createEnvironment({
+  const createTargetEnvironment = async () => {
+    const targetEnv = await createEnvironment({
       appName: inputs.appName,
       cname: prodEnv ? inputs.stagingCNAME : inputs.productionCNAME,
       envName:
@@ -42,7 +46,11 @@ export async function getTargetEnv(
           : inputs.blueEnv,
       platformBranchName: inputs.platformBranchName,
       templateName: inputs.templateName,
+      versionLabel: applicationVersion.VersionLabel,
     });
+    context.didCreateEnv = true;
+    return targetEnv;
+  };
 
   if (!targetEnv) {
     console.log("Target environment not found. Creating new environment...");
@@ -57,7 +65,7 @@ export async function getTargetEnv(
       { EnvironmentIds: [targetEnv.EnvironmentId] }
     );
     clearInterval(interval);
-    return getTargetEnv(inputs);
+    return getTargetEnv(inputs, applicationVersion, context);
   } else if (targetEnv.Status !== "Ready") {
     console.log("Target environment is not ready. Waiting...");
     const interval = setDescribeEventsInterval(targetEnv.EnvironmentId);
@@ -66,16 +74,54 @@ export async function getTargetEnv(
       { EnvironmentIds: [targetEnv.EnvironmentId] }
     );
     clearInterval(interval);
-    return getTargetEnv(inputs);
+    return getTargetEnv(inputs, applicationVersion, context);
   }
 
-  if (targetEnv.Health !== "Green") {
-    console.log("Target environment is not healthy.");
-    await terminateEnvironment(
-      targetEnv.EnvironmentId,
-      targetEnv.EnvironmentName
-    );
-    return await createTargetEnvironment();
+  switch (targetEnv.Health) {
+    case "Green":
+      console.log("Target environment's health is Green.");
+      break;
+    case "Yellow":
+      console.log("Target environment's health is Yellow.");
+      if (inputs.terminateUnhealthyEnvironment) {
+        console.log("Terminating unhealthy environment...");
+        await terminateEnvironment(
+          targetEnv.EnvironmentId,
+          targetEnv.EnvironmentName
+        );
+        return await createTargetEnvironment();
+      } else {
+        console.log("Exiting...");
+        process.exit(1);
+      }
+    case "Grey":
+      console.log("Target environment's health is Grey.");
+      if (inputs.terminateUnhealthyEnvironment) {
+        console.log("Terminating unhealthy environment...");
+        await terminateEnvironment(
+          targetEnv.EnvironmentId,
+          targetEnv.EnvironmentName
+        );
+        return await createTargetEnvironment();
+      } else {
+        console.log("Exiting...");
+        process.exit(1);
+      }
+    case "Red":
+      console.log("Target environment's health is Red.");
+      if (inputs.terminateUnhealthyEnvironment) {
+        console.log("Terminating unhealthy environment...");
+        await terminateEnvironment(
+          targetEnv.EnvironmentId,
+          targetEnv.EnvironmentName
+        );
+        return await createTargetEnvironment();
+      } else {
+        console.log("Exiting...");
+        process.exit(1);
+      }
+    default:
+      throw new Error("Target environment is unknown.");
   }
 
   return targetEnv;
