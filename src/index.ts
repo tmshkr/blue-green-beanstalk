@@ -55,15 +55,17 @@ export const client = new ElasticBeanstalkClient({
   credentials: hasCredentials ? credentials : undefined,
 });
 
+const context = { didCreateEnv: false };
+
 async function run(inputs: ActionInputs) {
   const applicationVersion = await getApplicationVersion(inputs);
-  const targetEnv = await getTargetEnv(inputs);
+  const targetEnv = await getTargetEnv(inputs, applicationVersion, context);
 
-  if (inputs.deploy) {
+  if (inputs.deploy && !context.didCreateEnv) {
     await deploy(targetEnv, applicationVersion);
-    if (inputs.swapCNAMES) {
-      await swapCNAMES(inputs);
-    }
+  }
+  if (inputs.swapCNAMES) {
+    await swapCNAMES(inputs);
   }
 }
 
