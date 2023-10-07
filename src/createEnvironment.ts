@@ -30,6 +30,7 @@ export async function createEnvironment({
   envName,
   platformBranchName,
   templateName,
+  versionLabel,
   waitForCreateEnv = true,
 }: {
   appName: string;
@@ -37,6 +38,7 @@ export async function createEnvironment({
   envName: string;
   platformBranchName: string;
   templateName?: string;
+  versionLabel: string;
   waitForCreateEnv?: boolean;
 }) {
   const startTime = new Date();
@@ -48,6 +50,7 @@ export async function createEnvironment({
       CNAMEPrefix: cname,
       PlatformArn: await getPlatformArn(platformBranchName),
       OptionSettings: templateName ? undefined : defaultOptionSettings,
+      VersionLabel: versionLabel,
     })
   );
   console.log(
