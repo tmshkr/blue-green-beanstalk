@@ -1,12 +1,12 @@
 name: "Blue/Green Beanstalk"
-description: "GitHub Action that automates deployment to AWS Elastic Beanstalk Blue/Green environments."
+description: "GitHub Action to automate deployment to Blue/Green environments on AWS Elastic Beanstalk."
 inputs:
   app_name:
     description: "Name of the Elastic Beanstalk application. If it doesn't exist, it will be created."
     required: true
   aws_access_key_id:
     description: "AWS Access Key ID. May instead be specified via the AWS_ACCESS_KEY_ID environment variable."
-    required: true
+    required: false
   aws_region:
     description: "AWS region. May instead be specified via the AWS_REGION environment variable."
     required: false
@@ -14,7 +14,7 @@ inputs:
     description: "AWS Secret Access Key. May instead be specified via the AWS_SECRET_ACCESS_KEY environment variable."
     required: false
   aws_session_token:
-    description: "AWS session token to use when using temporary credentials. May instead be specified via the AWS_SESSION_TOKEN environment variable."
+    description: "AWS session token for using temporary credentials. May instead be specified via the AWS_SESSION_TOKEN environment variable."
     required: false
   blue_env:
     description: "Name of the Blue environment"
@@ -35,6 +35,9 @@ inputs:
   staging_cname:
     description: "CNAME prefix for the staging environment"
     required: true
+  source_bundle_path:
+    description: "Path to the source bundle to deploy. If not specified, the sample application will be used."
+    required: false
   swap_cnames:
     description: "Whether to swap the CNAMEs of the staging and production environments"
     required: true
@@ -42,8 +45,12 @@ inputs:
   template_name:
     description: "Name of an Elastic Beanstalk configuration template to use when creating a new environment. If no template is specified, default option settings will be used."
     required: false
+  terminate_unhealthy_environment:
+    description: "Whether to terminate an unhealthy target environment. If set to false, the action will exit with an error when the target environment is unhealthy."
+    required: true
+    default: true
   wait_for_create_env:
-    description: "Whether to wait for the target environment to become healthy after creation. If set to false, the action will terminate immediately after starting the createEnvironment process."
+    description: "Whether to wait for the target environment to become healthy after creation. If set to false, the action will exit immediately after starting the createEnvironment process."
     required: true
     default: true
 outputs:
