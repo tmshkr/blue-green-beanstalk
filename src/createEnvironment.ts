@@ -54,6 +54,10 @@ export async function createEnvironment({
     `Creating environment ${newEnv.EnvironmentId} ${newEnv.EnvironmentName}...`
   );
 
+  if (!waitForCreateEnv) {
+    process.exit(0);
+  }
+
   const interval = setDescribeEventsInterval(newEnv.EnvironmentId, startTime);
   await waitUntilEnvironmentExists(
     { client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
