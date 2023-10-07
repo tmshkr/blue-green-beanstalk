@@ -26,7 +26,7 @@ export function setDescribeEventsInterval(
     } else {
       console.log(".");
     }
-  }, 5000);
+  }, 10000);
 }
 
 function printUTCTime(date: Date) {
