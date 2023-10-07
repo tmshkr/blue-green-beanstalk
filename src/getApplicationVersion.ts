@@ -10,7 +10,7 @@ import {
 } from "@aws-sdk/client-s3";
 const fs = require("fs");
 
-import { client, ActionInputs } from "./index";
+import { ActionInputs, client, credentials } from "./index";
 
 export async function getApplicationVersion(inputs: ActionInputs) {
   const { ApplicationVersions } = await client.send(
@@ -43,7 +43,10 @@ async function createApplicationVersion(inputs: ActionInputs) {
 
     SourceBundle = { S3Bucket, S3Key };
 
-    const s3 = new S3Client({ region: inputs.awsRegion });
+    const s3 = new S3Client({
+      region: inputs.awsRegion,
+      credentials: credentials.hasCredentials() ? credentials : undefined,
+    });
 
     const fileExists = await s3
       .send(

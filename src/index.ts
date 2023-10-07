@@ -5,6 +5,7 @@ import * as core from "@actions/core";
 import { ElasticBeanstalkClient } from "@aws-sdk/client-elastic-beanstalk";
 import { getApplicationVersion } from "./getApplicationVersion";
 import { getTargetEnv } from "./getTargetEnv";
+import { createEnvironment } from "./createEnvironment";
 import { deploy } from "./deploy";
 import { swapCNAMES } from "./swapCNAMES";
 
@@ -32,40 +33,40 @@ const inputs = {
     { required: true }
   ),
   versionLabel: core.getInput("version_label", { required: true }),
-  waitForCreateEnv: core.getBooleanInput("wait_for_create_env", {
-    required: true,
-  }),
 };
 
 export type ActionInputs = typeof inputs;
 
-const credentials = {
+export const credentials = {
   accessKeyId: inputs.awsAccessKeyId || process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey:
     inputs.awsSecretAccessKey || process.env.AWS_SECRET_ACCESS_KEY,
   sessionToken: inputs.awsSessionToken || process.env.AWS_SESSION_TOKEN,
+  hasCredentials() {
+    return Boolean(
+      (this.accessKeyId && this.secretAccessKey) || this.sessionToken
+    );
+  },
 };
-const hasCredentials = Boolean(
-  (credentials.accessKeyId && credentials.secretAccessKey) ||
-    credentials.sessionToken
-);
 
 export const client = new ElasticBeanstalkClient({
   region: inputs.awsRegion || process.env.AWS_REGION!,
-  credentials: hasCredentials ? credentials : undefined,
+  credentials: credentials.hasCredentials() ? credentials : undefined,
 });
-
-const context = { didCreateEnv: false };
 
 async function run(inputs: ActionInputs) {
   const applicationVersion = await getApplicationVersion(inputs);
-  const targetEnv = await getTargetEnv(inputs, applicationVersion, context);
+  const targetEnv = await getTargetEnv(inputs);
 
-  if (inputs.deploy && !context.didCreateEnv) {
-    await deploy(targetEnv, applicationVersion);
-  }
-  if (inputs.swapCNAMES) {
-    await swapCNAMES(inputs);
+  if (inputs.deploy) {
+    if (targetEnv) {
+      await deploy(targetEnv, applicationVersion);
+    } else {
+      await createEnvironment(inputs, applicationVersion);
+    }
+    if (inputs.swapCNAMES) {
+      await swapCNAMES(inputs);
+    }
   }
 }
 

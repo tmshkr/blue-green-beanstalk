@@ -1,11 +1,13 @@
 import {
+  ApplicationVersionDescription,
   CreateEnvironmentCommand,
   ListPlatformVersionsCommand,
   waitUntilEnvironmentExists,
 } from "@aws-sdk/client-elastic-beanstalk";
 
-import { client } from "./index";
+import { ActionInputs, client } from "./index";
 import { defaultOptionSettings } from "./config/defaultOptionSettings";
+import { getEnvironments } from "./getEnvironments";
 import { setDescribeEventsInterval } from "./setDescribeEventsInterval";
 
 async function getPlatformArn(platformBranchName: string) {
@@ -24,42 +26,30 @@ async function getPlatformArn(platformBranchName: string) {
   return PlatformSummaryList[0].PlatformArn;
 }
 
-export async function createEnvironment({
-  appName,
-  cname,
-  envName,
-  platformBranchName,
-  templateName,
-  versionLabel,
-  waitForCreateEnv = true,
-}: {
-  appName: string;
-  cname: string;
-  envName: string;
-  platformBranchName: string;
-  templateName?: string;
-  versionLabel: string;
-  waitForCreateEnv?: boolean;
-}) {
+export async function createEnvironment(
+  inputs: ActionInputs,
+  applicationVersion: ApplicationVersionDescription
+) {
+  const { prodEnv } = await getEnvironments(inputs);
+
   const startTime = new Date();
   const newEnv = await client.send(
     new CreateEnvironmentCommand({
-      ApplicationName: appName,
-      TemplateName: templateName || undefined,
-      EnvironmentName: envName,
-      CNAMEPrefix: cname,
-      PlatformArn: await getPlatformArn(platformBranchName),
-      OptionSettings: templateName ? undefined : defaultOptionSettings,
-      VersionLabel: versionLabel,
+      ApplicationName: applicationVersion.ApplicationName,
+      TemplateName: inputs.templateName || undefined,
+      EnvironmentName:
+        prodEnv?.EnvironmentName === inputs.blueEnv
+          ? inputs.greenEnv
+          : inputs.blueEnv,
+      CNAMEPrefix: prodEnv ? inputs.stagingCNAME : inputs.productionCNAME,
+      PlatformArn: await getPlatformArn(inputs.platformBranchName),
+      OptionSettings: inputs.templateName ? undefined : defaultOptionSettings,
+      VersionLabel: applicationVersion.VersionLabel,
     })
   );
   console.log(
     `Creating environment ${newEnv.EnvironmentId} ${newEnv.EnvironmentName}...`
   );
-
-  if (!waitForCreateEnv) {
-    process.exit(0);
-  }
 
   const interval = setDescribeEventsInterval(newEnv.EnvironmentId, startTime);
   await waitUntilEnvironmentExists(

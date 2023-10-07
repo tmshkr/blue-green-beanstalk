@@ -49,10 +49,6 @@ inputs:
     description: "Whether to terminate an unhealthy target environment. If set to false, the action will exit with an error when the target environment is unhealthy."
     required: true
     default: true
-  wait_for_create_env:
-    description: "Whether to wait for the target environment to become healthy after creation. If set to false, the action will exit immediately after starting the createEnvironment process."
-    required: true
-    default: true
 outputs:
   target_env:
     description: "Name of the target environment, to which the new application version should be deployed"

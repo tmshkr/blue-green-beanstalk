@@ -1,60 +1,22 @@
 import {
-  ApplicationVersionDescription,
-  DescribeEnvironmentsCommand,
   waitUntilEnvironmentExists,
   waitUntilEnvironmentTerminated,
   EnvironmentDescription,
 } from "@aws-sdk/client-elastic-beanstalk";
 import { client, ActionInputs } from "./index";
-import { createEnvironment } from "./createEnvironment";
+import { getEnvironments } from "./getEnvironments";
 import { terminateEnvironment } from "./terminateEnvironment";
 import { setDescribeEventsInterval } from "./setDescribeEventsInterval";
-import { context } from "@actions/github/lib/utils";
 
 export async function getTargetEnv(
-  inputs: ActionInputs,
-  applicationVersion: ApplicationVersionDescription,
-  context: { didCreateEnv: boolean }
-): Promise<EnvironmentDescription> {
-  const { Environments } = await client.send(
-    new DescribeEnvironmentsCommand({
-      ApplicationName: inputs.appName,
-      EnvironmentNames: [inputs.blueEnv, inputs.greenEnv],
-      IncludeDeleted: false,
-    })
-  );
-
-  const prodEnv = Environments.find(
-    (env) =>
-      env.CNAME ===
-      `${inputs.productionCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`
-  );
-  const stagingEnv = Environments.find(
-    (env) =>
-      env.CNAME ===
-      `${inputs.stagingCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`
-  );
-  const targetEnv = prodEnv ? stagingEnv : prodEnv;
-
-  const createTargetEnvironment = async () => {
-    const targetEnv = await createEnvironment({
-      appName: inputs.appName,
-      cname: prodEnv ? inputs.stagingCNAME : inputs.productionCNAME,
-      envName:
-        prodEnv?.EnvironmentName === inputs.blueEnv
-          ? inputs.greenEnv
-          : inputs.blueEnv,
-      platformBranchName: inputs.platformBranchName,
-      templateName: inputs.templateName,
-      versionLabel: applicationVersion.VersionLabel,
-    });
-    context.didCreateEnv = true;
-    return targetEnv;
-  };
+  inputs: ActionInputs
+): Promise<EnvironmentDescription | null> {
+  const { prodEnv, stagingEnv } = await getEnvironments(inputs);
+  const targetEnv = prodEnv ? stagingEnv : undefined;
 
   if (!targetEnv) {
-    console.log("Target environment not found. Creating new environment...");
-    return await createTargetEnvironment();
+    console.log("Target environment not found.");
+    return null;
   }
 
   if (targetEnv.Status === "Terminating") {
@@ -65,7 +27,7 @@ export async function getTargetEnv(
       { EnvironmentIds: [targetEnv.EnvironmentId] }
     );
     clearInterval(interval);
-    return getTargetEnv(inputs, applicationVersion, context);
+    return getTargetEnv(inputs);
   } else if (targetEnv.Status !== "Ready") {
     console.log("Target environment is not ready. Waiting...");
     const interval = setDescribeEventsInterval(targetEnv.EnvironmentId);
@@ -74,7 +36,7 @@ export async function getTargetEnv(
       { EnvironmentIds: [targetEnv.EnvironmentId] }
     );
     clearInterval(interval);
-    return getTargetEnv(inputs, applicationVersion, context);
+    return getTargetEnv(inputs);
   }
 
   switch (targetEnv.Health) {
@@ -89,20 +51,7 @@ export async function getTargetEnv(
           targetEnv.EnvironmentId,
           targetEnv.EnvironmentName
         );
-        return await createTargetEnvironment();
-      } else {
-        console.log("Exiting...");
-        process.exit(1);
-      }
-    case "Grey":
-      console.log("Target environment's health is Grey.");
-      if (inputs.terminateUnhealthyEnvironment) {
-        console.log("Terminating unhealthy environment...");
-        await terminateEnvironment(
-          targetEnv.EnvironmentId,
-          targetEnv.EnvironmentName
-        );
-        return await createTargetEnvironment();
+        return null;
       } else {
         console.log("Exiting...");
         process.exit(1);
@@ -115,7 +64,20 @@ export async function getTargetEnv(
           targetEnv.EnvironmentId,
           targetEnv.EnvironmentName
         );
-        return await createTargetEnvironment();
+        return null;
+      } else {
+        console.log("Exiting...");
+        process.exit(1);
+      }
+    case "Grey":
+      console.log("Target environment's health is Grey.");
+      if (inputs.terminateUnhealthyEnvironment) {
+        console.log("Terminating unhealthy environment...");
+        await terminateEnvironment(
+          targetEnv.EnvironmentId,
+          targetEnv.EnvironmentName
+        );
+        return null;
       } else {
         console.log("Exiting...");
         process.exit(1);
