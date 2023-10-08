@@ -11,7 +11,8 @@ export function getInputs() {
       required: true,
     }),
     productionCNAME: core.getInput("production_cname", { required: true }),
-    sourceBundlePath: core.getInput("source_bundle_path", { required: false }),
+    sourceBundlePath:
+      core.getInput("source_bundle_path", { required: false }) || undefined,
     stagingCNAME:
       core.getInput("staging_cname", { required: false }) || undefined,
     swapCNAMES: core.getBooleanInput("swap_cnames", { required: true }),
