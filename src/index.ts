@@ -37,6 +37,16 @@ const inputs = {
   versionLabel: core.getInput("version_label", { required: true }),
 };
 
+if (inputs.blueEnv === inputs.greenEnv) {
+  core.setFailed("blue_env and green_env must be different");
+  process.exit(1);
+}
+
+if (inputs.productionCNAME === inputs.stagingCNAME) {
+  core.setFailed("production_cname and staging_cname must be different");
+  process.exit(1);
+}
+
 export type ActionInputs = typeof inputs;
 
 export const credentials = {
@@ -44,32 +54,38 @@ export const credentials = {
   secretAccessKey:
     inputs.awsSecretAccessKey || process.env.AWS_SECRET_ACCESS_KEY,
   sessionToken: inputs.awsSessionToken || process.env.AWS_SESSION_TOKEN,
-  hasCredentials() {
-    return Boolean(
-      (this.accessKeyId && this.secretAccessKey) || this.sessionToken
-    );
+  get() {
+    return (this.accessKeyId && this.secretAccessKey) || this.sessionToken
+      ? {
+          accessKeyId: this.accessKeyId,
+          secretAccessKey: this.secretAccessKey,
+          sessionToken: this.sessionToken,
+        }
+      : undefined;
   },
 };
 
 export const client = new ElasticBeanstalkClient({
   region: inputs.awsRegion || process.env.AWS_REGION!,
-  credentials: credentials.hasCredentials() ? credentials : undefined,
+  credentials: credentials.get(),
 });
 
 async function run(inputs: ActionInputs) {
   const applicationVersion = await getApplicationVersion(inputs);
-  const targetEnv = await getTargetEnv(inputs);
+  let targetEnv = await getTargetEnv(inputs);
 
   if (inputs.deploy) {
     if (targetEnv) {
       await deploy(targetEnv, applicationVersion);
     } else {
-      await createEnvironment(inputs, applicationVersion);
+      targetEnv = await createEnvironment(inputs, applicationVersion);
     }
     if (inputs.swapCNAMES) {
       await swapCNAMES(inputs);
     }
   }
+
+  core.setOutput("target_env", targetEnv?.EnvironmentName || "");
 }
 
 run(inputs);
