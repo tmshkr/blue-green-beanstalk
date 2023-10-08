@@ -46,4 +46,8 @@ export async function swapCNAMES(
       SourceEnvironmentId: greenEnv.EnvironmentId,
     })
   );
+  await waitUntilEnvironmentUpdated(
+    { client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
+    { EnvironmentIds: [blueEnv.EnvironmentId, greenEnv.EnvironmentId] }
+  );
 }
