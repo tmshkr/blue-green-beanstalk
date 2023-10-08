@@ -4,11 +4,6 @@ export function getInputs() {
   return {
     appName: core.getInput("app_name", { required: true }),
     awsRegion: core.getInput("aws_region", { required: false }),
-    awsAccessKeyId: core.getInput("aws_access_key_id", { required: false }),
-    awsSecretAccessKey: core.getInput("aws_secret_access_key", {
-      required: false,
-    }),
-    awsSessionToken: core.getInput("aws_session_token", { required: false }),
     blueEnv: core.getInput("blue_env", { required: true }),
     deploy: core.getBooleanInput("deploy", { required: true }),
     greenEnv: core.getInput("green_env", { required: true }),
