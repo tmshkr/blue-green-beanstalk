@@ -1,17 +1,19 @@
 import {
   waitUntilEnvironmentExists,
   waitUntilEnvironmentTerminated,
+  ElasticBeanstalkClient,
   EnvironmentDescription,
 } from "@aws-sdk/client-elastic-beanstalk";
-import { client, ActionInputs } from "./index";
+import { ActionInputs } from "./inputs";
 import { getEnvironments } from "./getEnvironments";
 import { terminateEnvironment } from "./terminateEnvironment";
 import { setDescribeEventsInterval } from "./setDescribeEventsInterval";
 
 export async function getTargetEnv(
+  client: ElasticBeanstalkClient,
   inputs: ActionInputs
 ): Promise<EnvironmentDescription | null> {
-  const { prodEnv, stagingEnv } = await getEnvironments(inputs);
+  const { prodEnv, stagingEnv } = await getEnvironments(client, inputs);
   const targetEnv = prodEnv ? stagingEnv : undefined;
 
   if (!targetEnv) {
@@ -21,22 +23,22 @@ export async function getTargetEnv(
 
   if (targetEnv.Status === "Terminating") {
     console.log("Target environment is terminating. Waiting...");
-    const interval = setDescribeEventsInterval(targetEnv.EnvironmentId);
+    const interval = setDescribeEventsInterval(client, targetEnv.EnvironmentId);
     await waitUntilEnvironmentTerminated(
       { client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
       { EnvironmentIds: [targetEnv.EnvironmentId] }
     );
     clearInterval(interval);
-    return getTargetEnv(inputs);
+    return getTargetEnv(client, inputs);
   } else if (targetEnv.Status !== "Ready") {
     console.log("Target environment is not ready. Waiting...");
-    const interval = setDescribeEventsInterval(targetEnv.EnvironmentId);
+    const interval = setDescribeEventsInterval(client, targetEnv.EnvironmentId);
     await waitUntilEnvironmentExists(
       { client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
       { EnvironmentIds: [targetEnv.EnvironmentId] }
     );
     clearInterval(interval);
-    return getTargetEnv(inputs);
+    return getTargetEnv(client, inputs);
   }
 
   switch (targetEnv.Health) {
@@ -48,6 +50,7 @@ export async function getTargetEnv(
       if (inputs.terminateUnhealthyEnvironment) {
         console.log("Terminating unhealthy environment...");
         await terminateEnvironment(
+          client,
           targetEnv.EnvironmentId,
           targetEnv.EnvironmentName
         );
@@ -61,6 +64,7 @@ export async function getTargetEnv(
       if (inputs.terminateUnhealthyEnvironment) {
         console.log("Terminating unhealthy environment...");
         await terminateEnvironment(
+          client,
           targetEnv.EnvironmentId,
           targetEnv.EnvironmentName
         );
@@ -74,6 +78,7 @@ export async function getTargetEnv(
       if (inputs.terminateUnhealthyEnvironment) {
         console.log("Terminating unhealthy environment...");
         await terminateEnvironment(
+          client,
           targetEnv.EnvironmentId,
           targetEnv.EnvironmentName
         );

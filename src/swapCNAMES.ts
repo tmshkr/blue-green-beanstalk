@@ -1,12 +1,16 @@
 import {
   DescribeEnvironmentsCommand,
+  ElasticBeanstalkClient,
   SwapEnvironmentCNAMEsCommand,
   waitUntilEnvironmentUpdated,
 } from "@aws-sdk/client-elastic-beanstalk";
-import { ActionInputs, client } from "./index";
+import { ActionInputs } from "./inputs";
 const core = require("@actions/core");
 
-export async function swapCNAMES(inputs: ActionInputs) {
+export async function swapCNAMES(
+  client: ElasticBeanstalkClient,
+  inputs: ActionInputs
+) {
   const { Environments } = await client.send(
     new DescribeEnvironmentsCommand({
       ApplicationName: inputs.appName,

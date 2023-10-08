@@ -1,13 +1,14 @@
 import {
   ApplicationVersionDescription,
   EnvironmentDescription,
+  ElasticBeanstalkClient,
   UpdateEnvironmentCommand,
   waitUntilEnvironmentUpdated,
 } from "@aws-sdk/client-elastic-beanstalk";
-import { client } from ".";
 import { setDescribeEventsInterval } from "./setDescribeEventsInterval";
 
 export async function deploy(
+  client: ElasticBeanstalkClient,
   targetEnv: EnvironmentDescription,
   applicationVersion: ApplicationVersionDescription
 ) {
@@ -21,6 +22,7 @@ export async function deploy(
   );
 
   const interval = setDescribeEventsInterval(
+    client,
     targetEnv.EnvironmentId,
     startTime
   );

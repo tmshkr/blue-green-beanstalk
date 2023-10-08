@@ -1,7 +1,10 @@
-import { DescribeEventsCommand } from "@aws-sdk/client-elastic-beanstalk";
-import { client } from "./index";
+import {
+  DescribeEventsCommand,
+  ElasticBeanstalkClient,
+} from "@aws-sdk/client-elastic-beanstalk";
 
 export function setDescribeEventsInterval(
+  client: ElasticBeanstalkClient,
   environmentId: string,
   startTime = new Date()
 ): NodeJS.Timeout {

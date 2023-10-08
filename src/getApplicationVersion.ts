@@ -2,6 +2,7 @@ import {
   CreateApplicationVersionCommand,
   CreateStorageLocationCommand,
   DescribeApplicationVersionsCommand,
+  ElasticBeanstalkClient,
 } from "@aws-sdk/client-elastic-beanstalk";
 import {
   S3Client,
@@ -10,9 +11,12 @@ import {
 } from "@aws-sdk/client-s3";
 const fs = require("fs");
 
-import { ActionInputs, client, credentials } from "./index";
+import { ActionInputs, getCredentials } from "./inputs";
 
-export async function getApplicationVersion(inputs: ActionInputs) {
+export async function getApplicationVersion(
+  client: ElasticBeanstalkClient,
+  inputs: ActionInputs
+) {
   const { ApplicationVersions } = await client.send(
     new DescribeApplicationVersionsCommand({
       ApplicationName: inputs.appName,
@@ -25,11 +29,14 @@ export async function getApplicationVersion(inputs: ActionInputs) {
     return ApplicationVersions[0];
   }
 
-  const newVersion = await createApplicationVersion(inputs);
+  const newVersion = await createApplicationVersion(client, inputs);
   return newVersion;
 }
 
-async function createApplicationVersion(inputs: ActionInputs) {
+async function createApplicationVersion(
+  client: ElasticBeanstalkClient,
+  inputs: ActionInputs
+) {
   let SourceBundle;
 
   if (inputs.sourceBundlePath) {
@@ -45,7 +52,7 @@ async function createApplicationVersion(inputs: ActionInputs) {
 
     const s3 = new S3Client({
       region: inputs.awsRegion,
-      credentials: credentials.get(),
+      credentials: getCredentials(),
     });
 
     const fileExists = await s3

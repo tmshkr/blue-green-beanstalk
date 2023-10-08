@@ -1,10 +1,14 @@
 import {
   DescribeEnvironmentsCommand,
+  ElasticBeanstalkClient,
   EnvironmentDescription,
 } from "@aws-sdk/client-elastic-beanstalk";
-import { client, ActionInputs } from "./index";
+import { ActionInputs } from "./inputs";
 
-export async function getEnvironments(inputs: ActionInputs): Promise<{
+export async function getEnvironments(
+  client: ElasticBeanstalkClient,
+  inputs: ActionInputs
+): Promise<{
   prodEnv: EnvironmentDescription | undefined;
   stagingEnv: EnvironmentDescription | undefined;
 }> {
@@ -16,16 +20,9 @@ export async function getEnvironments(inputs: ActionInputs): Promise<{
     })
   );
 
+  const prodDomain = `${inputs.productionCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`;
   return {
-    prodEnv: Environments.find(
-      (env) =>
-        env.CNAME ===
-        `${inputs.productionCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`
-    ),
-    stagingEnv: Environments.find(
-      (env) =>
-        env.CNAME !==
-        `${inputs.productionCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`
-    ),
+    prodEnv: Environments.find((env) => env.CNAME === prodDomain),
+    stagingEnv: Environments.find((env) => env.CNAME !== prodDomain),
   };
 }
