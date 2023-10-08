@@ -45,7 +45,7 @@ async function createApplicationVersion(inputs: ActionInputs) {
 
     const s3 = new S3Client({
       region: inputs.awsRegion,
-      credentials: credentials.hasCredentials() ? credentials : undefined,
+      credentials: credentials.get(),
     });
 
     const fileExists = await s3
