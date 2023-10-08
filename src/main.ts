@@ -8,23 +8,28 @@ import { deploy } from "./deploy";
 import { swapCNAMES } from "./swapCNAMES";
 import { ActionInputs, getCredentials } from "./inputs";
 
+function checkInputs(inputs: ActionInputs) {
+  if (inputs.blueEnv === inputs.greenEnv) {
+    throw new Error("blue_env and green_env must be different");
+  }
+
+  if (inputs.productionCNAME === inputs.stagingCNAME) {
+    throw new Error("production_cname and staging_cname must be different");
+  }
+}
+
 export async function main(inputs: ActionInputs) {
+  try {
+    checkInputs(inputs);
+  } catch (err) {
+    core.setFailed(err.message);
+    return Promise.reject(err);
+  }
+
   const client = new ElasticBeanstalkClient({
     region: inputs.awsRegion || process.env.AWS_REGION,
     credentials: getCredentials(),
   });
-
-  if (inputs.blueEnv === inputs.greenEnv) {
-    core.setFailed("blue_env and green_env must be different");
-    return Promise.reject(
-      new Error("blue_env and green_env must be different")
-    );
-  }
-
-  if (inputs.productionCNAME === inputs.stagingCNAME) {
-    core.setFailed("production_cname and staging_cname must be different");
-    throw new Error("production_cname and staging_cname must be different");
-  }
 
   const applicationVersion = await getApplicationVersion(client, inputs);
   let targetEnv = await getTargetEnv(client, inputs);

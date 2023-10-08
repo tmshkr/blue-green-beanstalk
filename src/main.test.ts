@@ -4,9 +4,6 @@ import { ActionInputs } from "./inputs";
 const inputs: ActionInputs = {
   appName: "my-app",
   awsRegion: "us-west-2",
-  awsAccessKeyId: "",
-  awsSecretAccessKey: "",
-  awsSessionToken: "",
   blueEnv: "my-blue-env",
   deploy: true,
   greenEnv: "my-green-env",
@@ -29,5 +26,15 @@ describe("Action Inputs", () => {
         greenEnv: "test",
       })
     ).rejects.toThrow("blue_env and green_env must be different");
+  });
+
+  it("should reject with an error when productionCNAME and stagingCNAME are the same", () => {
+    expect(() =>
+      main({
+        ...inputs,
+        productionCNAME: "test",
+        stagingCNAME: "test",
+      })
+    ).rejects.toThrow("production_cname and staging_cname must be different");
   });
 });
