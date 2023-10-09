@@ -1,9 +1,9 @@
-name: Run Blue/Green Beanstalk
+name: Self-Test
 on:
   workflow_dispatch:
 
 jobs:
-  example:
+  run:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
