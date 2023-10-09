@@ -27,7 +27,7 @@ export async function main(inputs: ActionInputs) {
   }
 
   const client = new ElasticBeanstalkClient({
-    region: inputs.awsRegion || process.env.AWS_REGION,
+    region: inputs.awsRegion,
     credentials: getCredentials(),
   });
 
