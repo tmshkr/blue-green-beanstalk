@@ -58578,23 +58578,6 @@ module.exports = JSON.parse('{"name":"dotenv","version":"16.3.1","description":"
 /******/ 	}
 /******/ 	
 /************************************************************************/
-/******/ 	/* webpack/runtime/define property getters */
-/******/ 	(() => {
-/******/ 		// define getter functions for harmony exports
-/******/ 		__nccwpck_require__.d = (exports, definition) => {
-/******/ 			for(var key in definition) {
-/******/ 				if(__nccwpck_require__.o(definition, key) && !__nccwpck_require__.o(exports, key)) {
-/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
-/******/ 				}
-/******/ 			}
-/******/ 		};
-/******/ 	})();
-/******/ 	
-/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
-/******/ 	(() => {
-/******/ 		__nccwpck_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
-/******/ 	})();
-/******/ 	
 /******/ 	/* webpack/runtime/make namespace object */
 /******/ 	(() => {
 /******/ 		// define __esModule on exports
@@ -58618,17 +58601,46 @@ var __webpack_exports__ = {};
 // ESM COMPAT FLAG
 __nccwpck_require__.r(__webpack_exports__);
 
-// EXPORTS
-__nccwpck_require__.d(__webpack_exports__, {
-  "client": () => (/* binding */ client)
-});
-
-// EXTERNAL MODULE: ./node_modules/@actions/core/lib/core.js
-var core = __nccwpck_require__(42186);
 // EXTERNAL MODULE: ./node_modules/@aws-sdk/client-elastic-beanstalk/dist-cjs/index.js
 var dist_cjs = __nccwpck_require__(88850);
+// EXTERNAL MODULE: ./node_modules/@actions/core/lib/core.js
+var core = __nccwpck_require__(42186);
 // EXTERNAL MODULE: ./node_modules/@aws-sdk/client-s3/dist-cjs/index.js
 var client_s3_dist_cjs = __nccwpck_require__(19250);
+;// CONCATENATED MODULE: ./src/inputs.ts
+
+function getInputs() {
+    return {
+        appName: core.getInput("app_name", { required: true }),
+        awsRegion: core.getInput("aws_region", { required: false }),
+        blueEnv: core.getInput("blue_env", { required: true }),
+        deploy: core.getBooleanInput("deploy", { required: true }),
+        greenEnv: core.getInput("green_env", { required: true }),
+        platformBranchName: core.getInput("platform_branch_name", {
+            required: true,
+        }),
+        productionCNAME: core.getInput("production_cname", { required: true }),
+        sourceBundlePath: core.getInput("source_bundle_path", { required: false }) || undefined,
+        stagingCNAME: core.getInput("staging_cname", { required: false }) || undefined,
+        swapCNAMES: core.getBooleanInput("swap_cnames", { required: true }),
+        templateName: core.getInput("template_name", { required: false }) || undefined,
+        terminateUnhealthyEnvironment: core.getBooleanInput("terminate_unhealthy_environment", { required: true }),
+        versionLabel: core.getInput("version_label", { required: true }),
+    };
+}
+function getCredentials() {
+    const credentials = {
+        accessKeyId: process.env.INPUT_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.INPUT_AWS_SECRET_ACCESS_KEY ||
+            process.env.AWS_SECRET_ACCESS_KEY,
+        sessionToken: process.env.INPUT_AWS_SESSION_TOKEN || process.env.AWS_SESSION_TOKEN,
+    };
+    return (credentials.accessKeyId && credentials.secretAccessKey) ||
+        credentials.sessionToken
+        ? credentials
+        : undefined;
+}
+
 ;// CONCATENATED MODULE: ./src/getApplicationVersion.ts
 var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -58643,7 +58655,7 @@ var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _argume
 
 const fs = __nccwpck_require__(57147);
 
-function getApplicationVersion(inputs) {
+function getApplicationVersion(client, inputs) {
     return __awaiter(this, void 0, void 0, function* () {
         const { ApplicationVersions } = yield client.send(new dist_cjs.DescribeApplicationVersionsCommand({
             ApplicationName: inputs.appName,
@@ -58653,18 +58665,21 @@ function getApplicationVersion(inputs) {
             console.log(`Application version ${inputs.versionLabel} already exists.`);
             return ApplicationVersions[0];
         }
-        const newVersion = yield createApplicationVersion(inputs);
+        const newVersion = yield createApplicationVersion(client, inputs);
         return newVersion;
     });
 }
-function createApplicationVersion(inputs) {
+function createApplicationVersion(client, inputs) {
     return __awaiter(this, void 0, void 0, function* () {
         let SourceBundle;
         if (inputs.sourceBundlePath) {
             const { S3Bucket } = yield client.send(new dist_cjs.CreateStorageLocationCommand({}));
             const S3Key = `${inputs.appName}/${inputs.versionLabel.replace(/[^a-zA-Z0-9-_]/g, "-")}.zip`;
             SourceBundle = { S3Bucket, S3Key };
-            const s3 = new client_s3_dist_cjs.S3Client({ region: inputs.awsRegion });
+            const s3 = new client_s3_dist_cjs.S3Client({
+                region: inputs.awsRegion,
+                credentials: getCredentials(),
+            });
             const fileExists = yield s3
                 .send(new client_s3_dist_cjs.HeadObjectCommand({
                 Bucket: S3Bucket,
@@ -58696,6 +58711,171 @@ function createApplicationVersion(inputs) {
     });
 }
 
+;// CONCATENATED MODULE: ./src/getEnvironments.ts
+var getEnvironments_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+function getEnvironments(client, inputs) {
+    return getEnvironments_awaiter(this, void 0, void 0, function* () {
+        const { Environments } = yield client.send(new dist_cjs.DescribeEnvironmentsCommand({
+            ApplicationName: inputs.appName,
+            EnvironmentNames: [inputs.blueEnv, inputs.greenEnv],
+            IncludeDeleted: false,
+        }));
+        const prodDomain = `${inputs.productionCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`;
+        return {
+            prodEnv: Environments.find((env) => env.CNAME === prodDomain),
+            stagingEnv: Environments.find((env) => env.CNAME !== prodDomain),
+        };
+    });
+}
+
+;// CONCATENATED MODULE: ./src/setDescribeEventsInterval.ts
+var setDescribeEventsInterval_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+function setDescribeEventsInterval(client, environmentId, startTime = new Date()) {
+    return setInterval(() => setDescribeEventsInterval_awaiter(this, void 0, void 0, function* () {
+        let { Events } = yield client.send(new dist_cjs.DescribeEventsCommand({
+            EnvironmentId: environmentId,
+            StartTime: startTime,
+        }));
+        Events = Events.filter((event) => event.EventDate > startTime);
+        if (Events.length > 0) {
+            startTime = Events[0].EventDate;
+            for (const e of Events.reverse()) {
+                console.log(`${printUTCTime(e.EventDate)} ${e.Severity} ${e.EnvironmentName}: ${e.Message}`);
+            }
+        }
+        else {
+            console.log(".");
+        }
+    }), 10000);
+}
+function printUTCTime(date) {
+    const pad = (n) => (n < 10 ? `0${n}` : n);
+    return `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}`;
+}
+
+;// CONCATENATED MODULE: ./src/terminateEnvironment.ts
+var terminateEnvironment_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+
+function terminateEnvironment(client, environmentId, environmentName) {
+    return terminateEnvironment_awaiter(this, void 0, void 0, function* () {
+        console.log(`Terminating environment ${environmentId} ${environmentName}...`);
+        const startTime = new Date();
+        yield client.send(new dist_cjs.TerminateEnvironmentCommand({
+            EnvironmentId: environmentId,
+        }));
+        const interval = setDescribeEventsInterval(client, environmentId, startTime);
+        yield (0,dist_cjs.waitUntilEnvironmentTerminated)({ client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 }, { EnvironmentIds: [environmentId] });
+        clearInterval(interval);
+    });
+}
+
+;// CONCATENATED MODULE: ./src/getTargetEnv.ts
+var getTargetEnv_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+
+
+
+
+function getTargetEnv(client, inputs) {
+    return getTargetEnv_awaiter(this, void 0, void 0, function* () {
+        const { prodEnv, stagingEnv } = yield getEnvironments(client, inputs);
+        const targetEnv = prodEnv ? stagingEnv : undefined;
+        if (!targetEnv) {
+            console.log("Target environment not found.");
+            return null;
+        }
+        if (targetEnv.Status === "Terminating") {
+            console.log("Target environment is terminating. Waiting...");
+            const interval = setDescribeEventsInterval(client, targetEnv.EnvironmentId);
+            yield (0,dist_cjs.waitUntilEnvironmentTerminated)({ client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 }, { EnvironmentIds: [targetEnv.EnvironmentId] });
+            clearInterval(interval);
+            return getTargetEnv(client, inputs);
+        }
+        else if (targetEnv.Status !== "Ready") {
+            console.log("Target environment is not ready. Waiting...");
+            const interval = setDescribeEventsInterval(client, targetEnv.EnvironmentId);
+            yield (0,dist_cjs.waitUntilEnvironmentExists)({ client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 }, { EnvironmentIds: [targetEnv.EnvironmentId] });
+            clearInterval(interval);
+            return getTargetEnv(client, inputs);
+        }
+        switch (targetEnv.Health) {
+            case "Green":
+                console.log("Target environment's health is Green.");
+                break;
+            case "Yellow":
+                console.log("Target environment's health is Yellow.");
+                if (inputs.terminateUnhealthyEnvironment) {
+                    console.log("Terminating unhealthy environment...");
+                    yield terminateEnvironment(client, targetEnv.EnvironmentId, targetEnv.EnvironmentName);
+                    return null;
+                }
+                else {
+                    console.log("Exiting...");
+                    process.exit(1);
+                }
+            case "Red":
+                console.log("Target environment's health is Red.");
+                if (inputs.terminateUnhealthyEnvironment) {
+                    console.log("Terminating unhealthy environment...");
+                    yield terminateEnvironment(client, targetEnv.EnvironmentId, targetEnv.EnvironmentName);
+                    return null;
+                }
+                else {
+                    console.log("Exiting...");
+                    process.exit(1);
+                }
+            case "Grey":
+                console.log("Target environment's health is Grey.");
+                if (inputs.terminateUnhealthyEnvironment) {
+                    console.log("Terminating unhealthy environment...");
+                    yield terminateEnvironment(client, targetEnv.EnvironmentId, targetEnv.EnvironmentName);
+                    return null;
+                }
+                else {
+                    console.log("Exiting...");
+                    process.exit(1);
+                }
+            default:
+                throw new Error("Target environment is unknown.");
+        }
+        return targetEnv;
+    });
+}
+
 ;// CONCATENATED MODULE: ./src/config/defaultOptionSettings.ts
 const defaultOptionSettings = [
     {
@@ -58720,41 +58900,6 @@ const defaultOptionSettings = [
     },
 ];
 
-;// CONCATENATED MODULE: ./src/setDescribeEventsInterval.ts
-var setDescribeEventsInterval_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-
-
-function setDescribeEventsInterval(environmentId, startTime = new Date()) {
-    return setInterval(() => setDescribeEventsInterval_awaiter(this, void 0, void 0, function* () {
-        let { Events } = yield client.send(new dist_cjs.DescribeEventsCommand({
-            EnvironmentId: environmentId,
-            StartTime: startTime,
-        }));
-        Events = Events.filter((event) => event.EventDate > startTime);
-        if (Events.length > 0) {
-            startTime = Events[0].EventDate;
-            for (const e of Events.reverse()) {
-                console.log(`${printUTCTime(e.EventDate)} ${e.Severity} ${e.EnvironmentName}: ${e.Message}`);
-            }
-        }
-        else {
-            console.log(".");
-        }
-    }), 5000);
-}
-function printUTCTime(date) {
-    const pad = (n) => (n < 10 ? `0${n}` : n);
-    return `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}`;
-}
-
 ;// CONCATENATED MODULE: ./src/createEnvironment.ts
 var createEnvironment_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -58769,7 +58914,7 @@ var createEnvironment_awaiter = (undefined && undefined.__awaiter) || function (
 
 
 
-function getPlatformArn(platformBranchName) {
+function getPlatformArn(client, platformBranchName) {
     return createEnvironment_awaiter(this, void 0, void 0, function* () {
         const { PlatformSummaryList } = yield client.send(new dist_cjs.ListPlatformVersionsCommand({
             Filters: [
@@ -58784,111 +58929,26 @@ function getPlatformArn(platformBranchName) {
         return PlatformSummaryList[0].PlatformArn;
     });
 }
-function createEnvironment({ appName, cname, envName, platformBranchName, templateName, waitForCreateEnv = true, }) {
+function createEnvironment(client, inputs, applicationVersion) {
     return createEnvironment_awaiter(this, void 0, void 0, function* () {
+        const { prodEnv } = yield getEnvironments(client, inputs);
         const startTime = new Date();
         const newEnv = yield client.send(new dist_cjs.CreateEnvironmentCommand({
-            ApplicationName: appName,
-            TemplateName: templateName || undefined,
-            EnvironmentName: envName,
-            CNAMEPrefix: cname,
-            PlatformArn: yield getPlatformArn(platformBranchName),
-            OptionSettings: templateName ? undefined : defaultOptionSettings,
-        }));
-        console.log(`Creating environment ${newEnv.EnvironmentId} ${newEnv.EnvironmentName}...`);
-        const interval = setDescribeEventsInterval(newEnv.EnvironmentId, startTime);
-        yield (0,dist_cjs.waitUntilEnvironmentExists)({ client: client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 }, { EnvironmentIds: [newEnv.EnvironmentId] });
-        clearInterval(interval);
-        return newEnv;
-    });
-}
-
-;// CONCATENATED MODULE: ./src/terminateEnvironment.ts
-var terminateEnvironment_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-
-
-
-function terminateEnvironment(environmentId, environmentName) {
-    return terminateEnvironment_awaiter(this, void 0, void 0, function* () {
-        console.log(`Terminating environment ${environmentId} ${environmentName}...`);
-        const startTime = new Date();
-        yield client.send(new dist_cjs.TerminateEnvironmentCommand({
-            EnvironmentId: environmentId,
-        }));
-        const interval = setDescribeEventsInterval(environmentId, startTime);
-        yield (0,dist_cjs.waitUntilEnvironmentTerminated)({ client: client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 }, { EnvironmentIds: [environmentId] });
-        clearInterval(interval);
-    });
-}
-
-;// CONCATENATED MODULE: ./src/getTargetEnv.ts
-var getTargetEnv_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-
-
-
-
-
-function getTargetEnv(inputs) {
-    return getTargetEnv_awaiter(this, void 0, void 0, function* () {
-        const { Environments } = yield client.send(new dist_cjs.DescribeEnvironmentsCommand({
-            ApplicationName: inputs.appName,
-            EnvironmentNames: [inputs.blueEnv, inputs.greenEnv],
-            IncludeDeleted: false,
-        }));
-        const prodEnv = Environments.find((env) => env.CNAME ===
-            `${inputs.productionCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`);
-        const stagingEnv = Environments.find((env) => env.CNAME ===
-            `${inputs.stagingCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`);
-        const targetEnv = prodEnv ? stagingEnv : prodEnv;
-        const createTargetEnvironment = () => createEnvironment({
-            appName: inputs.appName,
-            cname: prodEnv ? inputs.stagingCNAME : inputs.productionCNAME,
-            envName: (prodEnv === null || prodEnv === void 0 ? void 0 : prodEnv.EnvironmentName) === inputs.blueEnv
+            ApplicationName: applicationVersion.ApplicationName,
+            TemplateName: inputs.templateName,
+            EnvironmentName: (prodEnv === null || prodEnv === void 0 ? void 0 : prodEnv.EnvironmentName) === inputs.blueEnv
                 ? inputs.greenEnv
                 : inputs.blueEnv,
-            platformBranchName: inputs.platformBranchName,
-            templateName: inputs.templateName,
-        });
-        if (!targetEnv) {
-            console.log("Target environment not found. Creating new environment...");
-            return yield createTargetEnvironment();
-        }
-        if (targetEnv.Status === "Terminating") {
-            console.log("Target environment is terminating. Waiting...");
-            const interval = setDescribeEventsInterval(targetEnv.EnvironmentId);
-            yield (0,dist_cjs.waitUntilEnvironmentTerminated)({ client: client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 }, { EnvironmentIds: [targetEnv.EnvironmentId] });
-            clearInterval(interval);
-            return getTargetEnv(inputs);
-        }
-        else if (targetEnv.Status !== "Ready") {
-            console.log("Target environment is not ready. Waiting...");
-            const interval = setDescribeEventsInterval(targetEnv.EnvironmentId);
-            yield (0,dist_cjs.waitUntilEnvironmentExists)({ client: client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 }, { EnvironmentIds: [targetEnv.EnvironmentId] });
-            clearInterval(interval);
-            return getTargetEnv(inputs);
-        }
-        if (targetEnv.Health !== "Green") {
-            console.log("Target environment is not healthy.");
-            yield terminateEnvironment(targetEnv.EnvironmentId, targetEnv.EnvironmentName);
-            return yield createTargetEnvironment();
-        }
-        return targetEnv;
+            CNAMEPrefix: prodEnv ? inputs.stagingCNAME : inputs.productionCNAME,
+            PlatformArn: yield getPlatformArn(client, inputs.platformBranchName),
+            OptionSettings: inputs.templateName ? undefined : defaultOptionSettings,
+            VersionLabel: applicationVersion.VersionLabel,
+        }));
+        console.log(`Creating environment ${newEnv.EnvironmentId} ${newEnv.EnvironmentName}...`);
+        const interval = setDescribeEventsInterval(client, newEnv.EnvironmentId, startTime);
+        yield (0,dist_cjs.waitUntilEnvironmentExists)({ client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 }, { EnvironmentIds: [newEnv.EnvironmentId] });
+        clearInterval(interval);
+        return newEnv;
     });
 }
 
@@ -58904,8 +58964,7 @@ var deploy_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _a
 };
 
 
-
-function deploy(targetEnv, applicationVersion) {
+function deploy(client, targetEnv, applicationVersion) {
     return deploy_awaiter(this, void 0, void 0, function* () {
         console.log(`Starting deployment to to ${targetEnv.EnvironmentName}`);
         const startTime = new Date();
@@ -58913,8 +58972,8 @@ function deploy(targetEnv, applicationVersion) {
             EnvironmentId: targetEnv.EnvironmentId,
             VersionLabel: applicationVersion.VersionLabel,
         }));
-        const interval = setDescribeEventsInterval(targetEnv.EnvironmentId, startTime);
-        yield (0,dist_cjs.waitUntilEnvironmentUpdated)({ client: client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 }, { EnvironmentIds: [targetEnv.EnvironmentId] });
+        const interval = setDescribeEventsInterval(client, targetEnv.EnvironmentId, startTime);
+        yield (0,dist_cjs.waitUntilEnvironmentUpdated)({ client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 }, { EnvironmentIds: [targetEnv.EnvironmentId] });
         clearInterval(interval);
     });
 }
@@ -58930,9 +58989,8 @@ var swapCNAMES_awaiter = (undefined && undefined.__awaiter) || function (thisArg
     });
 };
 
-
 const swapCNAMES_core = __nccwpck_require__(42186);
-function swapCNAMES(inputs) {
+function swapCNAMES(client, inputs) {
     return swapCNAMES_awaiter(this, void 0, void 0, function* () {
         const { Environments } = yield client.send(new dist_cjs.DescribeEnvironmentsCommand({
             ApplicationName: inputs.appName,
@@ -58947,18 +59005,19 @@ function swapCNAMES(inputs) {
         }
         if (blueEnv.Status !== "Ready" || greenEnv.Status !== "Ready") {
             swapCNAMES_core.info("Environments not yet ready. Waiting...");
-            yield (0,dist_cjs.waitUntilEnvironmentUpdated)({ client: client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 }, { EnvironmentIds: [blueEnv.EnvironmentId, greenEnv.EnvironmentId] });
+            yield (0,dist_cjs.waitUntilEnvironmentUpdated)({ client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 }, { EnvironmentIds: [blueEnv.EnvironmentId, greenEnv.EnvironmentId] });
         }
         swapCNAMES_core.info("Swapping CNAMES...");
         yield client.send(new dist_cjs.SwapEnvironmentCNAMEsCommand({
             DestinationEnvironmentId: blueEnv.EnvironmentId,
             SourceEnvironmentId: greenEnv.EnvironmentId,
         }));
+        yield (0,dist_cjs.waitUntilEnvironmentUpdated)({ client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 }, { EnvironmentIds: [blueEnv.EnvironmentId, greenEnv.EnvironmentId] });
     });
 }
 
-;// CONCATENATED MODULE: ./src/index.ts
-var src_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+;// CONCATENATED MODULE: ./src/main.ts
+var main_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -58967,63 +59026,60 @@ var src_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _argu
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+
+
+
+
+
+
+
+
+function checkInputs(inputs) {
+    if (inputs.blueEnv === inputs.greenEnv) {
+        throw new Error("blue_env and green_env must be different");
+    }
+    if (inputs.productionCNAME === inputs.stagingCNAME) {
+        throw new Error("production_cname and staging_cname must be different");
+    }
+}
+function main(inputs) {
+    return main_awaiter(this, void 0, void 0, function* () {
+        try {
+            checkInputs(inputs);
+        }
+        catch (err) {
+            core.setFailed(err.message);
+            return Promise.reject(err);
+        }
+        const client = new dist_cjs.ElasticBeanstalkClient({
+            region: inputs.awsRegion || process.env.AWS_REGION,
+            credentials: getCredentials(),
+        });
+        const applicationVersion = yield getApplicationVersion(client, inputs);
+        let targetEnv = yield getTargetEnv(client, inputs);
+        if (inputs.deploy) {
+            if (targetEnv) {
+                yield deploy(client, targetEnv, applicationVersion);
+            }
+            else {
+                targetEnv = yield createEnvironment(client, inputs, applicationVersion);
+            }
+            if (inputs.swapCNAMES) {
+                yield swapCNAMES(client, inputs);
+            }
+        }
+        core.setOutput("target_env", (targetEnv === null || targetEnv === void 0 ? void 0 : targetEnv.EnvironmentName) || "");
+    });
+}
+
+;// CONCATENATED MODULE: ./src/run.ts
 if (!process.env.GITHUB_ACTIONS) {
     (__nccwpck_require__(12437).config)();
 }
 
 
-
-
-
-
-const inputs = {
-    appName: core.getInput("app_name", { required: true }),
-    awsRegion: core.getInput("aws_region", { required: false }),
-    awsAccessKeyId: core.getInput("aws_access_key_id", { required: false }),
-    awsSecretAccessKey: core.getInput("aws_secret_access_key", {
-        required: false,
-    }),
-    awsSessionToken: core.getInput("aws_session_token", { required: false }),
-    blueEnv: core.getInput("blue_env", { required: true }),
-    deploy: core.getBooleanInput("deploy", { required: true }),
-    greenEnv: core.getInput("green_env", { required: true }),
-    platformBranchName: core.getInput("platform_branch_name", {
-        required: true,
-    }),
-    productionCNAME: core.getInput("production_cname", { required: true }),
-    sourceBundlePath: core.getInput("source_bundle_path", { required: false }),
-    stagingCNAME: core.getInput("staging_cname", { required: true }),
-    swapCNAMES: core.getBooleanInput("swap_cnames", { required: true }),
-    templateName: core.getInput("template_name", { required: false }),
-    versionLabel: core.getInput("version_label", { required: true }),
-    waitForCreateEnv: core.getBooleanInput("wait_for_create_env", {
-        required: true,
-    }),
-};
-const credentials = {
-    accessKeyId: inputs.awsAccessKeyId || process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: inputs.awsSecretAccessKey || process.env.AWS_SECRET_ACCESS_KEY,
-    sessionToken: inputs.awsSessionToken || process.env.AWS_SESSION_TOKEN,
-};
-const hasCredentials = (credentials.accessKeyId && credentials.secretAccessKey) ||
-    credentials.sessionToken;
-const client = new dist_cjs.ElasticBeanstalkClient({
-    region: inputs.awsRegion || process.env.AWS_REGION,
-    credentials: hasCredentials ? credentials : undefined,
-});
-function run(inputs) {
-    return src_awaiter(this, void 0, void 0, function* () {
-        const applicationVersion = yield getApplicationVersion(inputs);
-        const targetEnv = yield getTargetEnv(inputs);
-        if (inputs.deploy) {
-            yield deploy(targetEnv, applicationVersion);
-            if (inputs.swapCNAMES) {
-                yield swapCNAMES(inputs);
-            }
-        }
-    });
-}
-run(inputs);
+const inputs = getInputs();
+main(inputs);
 
 })();
 
