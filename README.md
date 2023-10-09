@@ -16,4 +16,4 @@ The action will then optionally swap the CNAMEs of the staging and production en
 
 ## Inputs
 
-See (action.yml)[./action.yml].
+See (action.yml)[action.yml].
