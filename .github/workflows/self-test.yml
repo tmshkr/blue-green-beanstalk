@@ -1,0 +1,22 @@
+name: Run Blue/Green Beanstalk
+on:
+  workflow_dispatch:
+
+jobs:
+  example:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Blue/Green Beanstalk
+        uses: ./
+        with:
+          app_name: "test-app"
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_region: "us-west-2"
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          blue_env: "my-blue-env"
+          green_env: "my-green-env"
+          platform_branch_name: "Docker running on 64bit Amazon Linux 2023"
+          production_cname: "blue-green-beanstalk-test"
+          version_label: "test-version"
