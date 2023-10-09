@@ -58612,7 +58612,8 @@ var client_s3_dist_cjs = __nccwpck_require__(19250);
 function getInputs() {
     return {
         appName: core.getInput("app_name", { required: true }),
-        awsRegion: core.getInput("aws_region", { required: false }),
+        awsRegion: core.getInput("aws_region", { required: false }) ||
+            process.env.AWS_REGION,
         blueEnv: core.getInput("blue_env", { required: true }),
         deploy: core.getBooleanInput("deploy", { required: true }),
         greenEnv: core.getInput("green_env", { required: true }),
@@ -59052,7 +59053,7 @@ function main(inputs) {
             return Promise.reject(err);
         }
         const client = new dist_cjs.ElasticBeanstalkClient({
-            region: inputs.awsRegion || process.env.AWS_REGION,
+            region: inputs.awsRegion,
             credentials: getCredentials(),
         });
         const applicationVersion = yield getApplicationVersion(client, inputs);
