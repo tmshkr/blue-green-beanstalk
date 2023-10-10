@@ -58621,11 +58621,14 @@ function getInputs() {
             required: true,
         }),
         productionCNAME: core.getInput("production_cname", { required: true }),
-        sourceBundlePath: core.getInput("source_bundle_path", { required: false }) || undefined,
+        sourceBundle: core.getInput("source_bundle", { required: false }) || undefined,
         stagingCNAME: core.getInput("staging_cname", { required: false }) || undefined,
         swapCNAMES: core.getBooleanInput("swap_cnames", { required: true }),
         templateName: core.getInput("template_name", { required: false }) || undefined,
         terminateUnhealthyEnvironment: core.getBooleanInput("terminate_unhealthy_environment", { required: true }),
+        versionDescription: core.getInput("version_description", {
+            required: false,
+        }) || undefined,
         versionLabel: core.getInput("version_label", { required: true }),
     };
 }
@@ -58673,7 +58676,7 @@ function getApplicationVersion(client, inputs) {
 function createApplicationVersion(client, inputs) {
     return __awaiter(this, void 0, void 0, function* () {
         let SourceBundle;
-        if (inputs.sourceBundlePath) {
+        if (inputs.sourceBundle) {
             const { S3Bucket } = yield client.send(new dist_cjs.CreateStorageLocationCommand({}));
             const S3Key = `${inputs.appName}/${inputs.versionLabel.replace(/[^a-zA-Z0-9-_]/g, "-")}.zip`;
             SourceBundle = { S3Bucket, S3Key };
@@ -58698,15 +58701,16 @@ function createApplicationVersion(client, inputs) {
                 yield s3.send(new client_s3_dist_cjs.PutObjectCommand({
                     Bucket: S3Bucket,
                     Key: S3Key,
-                    Body: fs.readFileSync(inputs.sourceBundlePath),
+                    Body: fs.readFileSync(inputs.sourceBundle),
                 }));
             }
         }
         const { ApplicationVersion } = yield client.send(new dist_cjs.CreateApplicationVersionCommand({
             ApplicationName: inputs.appName,
             AutoCreateApplication: true,
-            VersionLabel: inputs.versionLabel,
+            Description: inputs.versionDescription,
             SourceBundle,
+            VersionLabel: inputs.versionLabel,
         }));
         return ApplicationVersion;
     });
