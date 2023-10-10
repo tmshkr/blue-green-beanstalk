@@ -20,11 +20,12 @@ describe("checkInputs", () => {
         greenEnv: `same-${key}`,
         platformBranchName: "Docker running on 64bit Amazon Linux 2023",
         productionCNAME: `blue-green-test-${key}`,
-        sourceBundlePath: undefined,
+        sourceBundle: undefined,
         stagingCNAME: `blue-green-test-staging-${key}`,
         swapCNAMES: true,
         templateName: undefined,
         terminateUnhealthyEnvironment: true,
+        versionDescription: undefined,
         versionLabel: `test-version-${key}`,
       })
     ).rejects.toThrow("blue_env and green_env must be different");
@@ -40,11 +41,12 @@ describe("checkInputs", () => {
         greenEnv: `my-green-env-${key}`,
         platformBranchName: "Docker running on 64bit Amazon Linux 2023",
         productionCNAME: `same-${key}`,
-        sourceBundlePath: undefined,
+        sourceBundle: undefined,
         stagingCNAME: `same-${key}`,
         swapCNAMES: true,
         templateName: undefined,
         terminateUnhealthyEnvironment: true,
+        versionDescription: undefined,
         versionLabel: `test-version-${key}`,
       })
     ).rejects.toThrow("production_cname and staging_cname must be different");
@@ -61,11 +63,12 @@ describe("main", () => {
     greenEnv: `my-green-env-${key}`,
     platformBranchName: "Docker running on 64bit Amazon Linux 2023",
     productionCNAME: `blue-green-test-${key}`,
-    sourceBundlePath: undefined,
+    sourceBundle: undefined,
     stagingCNAME: `blue-green-test-staging-${key}`,
     swapCNAMES: true,
     templateName: undefined,
     terminateUnhealthyEnvironment: true,
+    versionDescription: undefined,
     versionLabel: `test-version-${key}`,
   };
 
