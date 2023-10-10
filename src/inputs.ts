@@ -13,8 +13,8 @@ export function getInputs() {
       required: true,
     }),
     productionCNAME: core.getInput("production_cname", { required: true }),
-    sourceBundlePath:
-      core.getInput("source_bundle_path", { required: false }) || undefined,
+    sourceBundle:
+      core.getInput("source_bundle", { required: false }) || undefined,
     stagingCNAME:
       core.getInput("staging_cname", { required: false }) || undefined,
     swapCNAMES: core.getBooleanInput("swap_cnames", { required: true }),
@@ -24,6 +24,10 @@ export function getInputs() {
       "terminate_unhealthy_environment",
       { required: true }
     ),
+    versionDescription:
+      core.getInput("version_description", {
+        required: false,
+      }) || undefined,
     versionLabel: core.getInput("version_label", { required: true }),
   };
 }
