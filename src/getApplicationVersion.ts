@@ -39,7 +39,7 @@ async function createApplicationVersion(
 ) {
   let SourceBundle;
 
-  if (inputs.sourceBundlePath) {
+  if (inputs.sourceBundle) {
     const { S3Bucket } = await client.send(
       new CreateStorageLocationCommand({})
     );
@@ -76,7 +76,7 @@ async function createApplicationVersion(
         new PutObjectCommand({
           Bucket: S3Bucket,
           Key: S3Key,
-          Body: fs.readFileSync(inputs.sourceBundlePath),
+          Body: fs.readFileSync(inputs.sourceBundle),
         })
       );
     }
@@ -86,8 +86,9 @@ async function createApplicationVersion(
     new CreateApplicationVersionCommand({
       ApplicationName: inputs.appName,
       AutoCreateApplication: true,
-      VersionLabel: inputs.versionLabel,
+      Description: inputs.versionDescription,
       SourceBundle,
+      VersionLabel: inputs.versionLabel,
     })
   );
 
