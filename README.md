@@ -14,6 +14,44 @@ If neither the blue or green environments exist, it will create a new environmen
 
 The action will then optionally swap the CNAMEs of the staging and production environments.
 
-## Inputs
+## Inputs/Outputs
 
 See [action.yml](action.yml)
+
+## Usage
+
+See the [example repo](https://github.com/tmshkr/blue-green-beanstalk-example) for an example of how to use this action.
+
+```yaml
+name: Example Deploy Workflow
+  on:
+    workflow_dispatch:
+    push:
+      branches:
+        - main
+        - staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Generate source bundle
+        run: echo ${{ github.ref_name }} > ENVIRONMENT && zip -r bundle.zip . -x '*.git*'
+      - name: Deploy
+        uses: tmshkr/blue-green-beanstalk@v1
+        with:
+          app_name: "test-app"
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_region: ${{ vars.AWS_REGION }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          blue_env: "my-blue-env"
+          green_env: "my-green-env"
+          platform_branch_name: "Docker running on 64bit Amazon Linux 2023"
+          production_cname: "your-unique-cname"
+          source_bundle: "bundle.zip"
+          swap_cnames: ${{ github.ref_name == 'main' }}
+          version_description: "Deployed by ${{ github.actor }}"
+          version_label: ${{ github.ref_name }}-${{ github.sha }}
+```
