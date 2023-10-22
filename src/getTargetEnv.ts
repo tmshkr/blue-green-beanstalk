@@ -60,52 +60,39 @@ export async function getTargetEnv(
   switch (targetEnv.Health) {
     case "Green":
       console.log("Target environment's health is Green.");
-      break;
+      return targetEnv;
+
     case "Yellow":
       console.log("Target environment's health is Yellow.");
-      if (inputs.terminateUnhealthyEnvironment) {
-        console.log("Terminating unhealthy environment...");
-        await terminateEnvironment(
-          client,
-          targetEnv.EnvironmentId,
-          targetEnv.EnvironmentName
-        );
-        return getTargetEnv(client, inputs);
-      } else {
-        console.log("Exiting...");
-        process.exit(1);
-      }
+      await terminateEnvironment(
+        client,
+        inputs,
+        targetEnv.EnvironmentId,
+        targetEnv.EnvironmentName
+      );
+      return getTargetEnv(client, inputs);
+
     case "Red":
       console.log("Target environment's health is Red.");
-      if (inputs.terminateUnhealthyEnvironment) {
-        console.log("Terminating unhealthy environment...");
-        await terminateEnvironment(
-          client,
-          targetEnv.EnvironmentId,
-          targetEnv.EnvironmentName
-        );
-        return getTargetEnv(client, inputs);
-      } else {
-        console.log("Exiting...");
-        process.exit(1);
-      }
+      await terminateEnvironment(
+        client,
+        inputs,
+        targetEnv.EnvironmentId,
+        targetEnv.EnvironmentName
+      );
+      return getTargetEnv(client, inputs);
+
     case "Grey":
       console.log("Target environment's health is Grey.");
-      if (inputs.terminateUnhealthyEnvironment) {
-        console.log("Terminating unhealthy environment...");
-        await terminateEnvironment(
-          client,
-          targetEnv.EnvironmentId,
-          targetEnv.EnvironmentName
-        );
-        return getTargetEnv(client, inputs);
-      } else {
-        console.log("Exiting...");
-        process.exit(1);
-      }
+      await terminateEnvironment(
+        client,
+        inputs,
+        targetEnv.EnvironmentId,
+        targetEnv.EnvironmentName
+      );
+      return getTargetEnv(client, inputs);
+
     default:
       throw new Error("Target environment is unknown.");
   }
-
-  return targetEnv;
 }
