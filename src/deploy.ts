@@ -6,9 +6,11 @@ import {
   waitUntilEnvironmentUpdated,
 } from "@aws-sdk/client-elastic-beanstalk";
 import { setDescribeEventsInterval } from "./setDescribeEventsInterval";
+import { ActionInputs } from "./inputs";
 
 export async function deploy(
   client: ElasticBeanstalkClient,
+  inputs: ActionInputs,
   targetEnv: EnvironmentDescription,
   applicationVersion: ApplicationVersionDescription
 ) {
@@ -20,6 +22,10 @@ export async function deploy(
       VersionLabel: applicationVersion.VersionLabel,
     })
   );
+
+  if (!inputs.waitForEnvironment) {
+    process.exit(0);
+  }
 
   const interval = setDescribeEventsInterval(
     client,

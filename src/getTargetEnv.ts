@@ -22,23 +22,39 @@ export async function getTargetEnv(
   }
 
   if (targetEnv.Status === "Terminating") {
-    console.log("Target environment is terminating. Waiting...");
-    const interval = setDescribeEventsInterval(client, targetEnv.EnvironmentId);
-    await waitUntilEnvironmentTerminated(
-      { client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
-      { EnvironmentIds: [targetEnv.EnvironmentId] }
-    );
-    clearInterval(interval);
-    return getTargetEnv(client, inputs);
+    if (inputs.waitForEnvironment) {
+      console.log("Target environment is terminating. Waiting...");
+      const interval = setDescribeEventsInterval(
+        client,
+        targetEnv.EnvironmentId
+      );
+      await waitUntilEnvironmentTerminated(
+        { client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
+        { EnvironmentIds: [targetEnv.EnvironmentId] }
+      );
+      clearInterval(interval);
+      return getTargetEnv(client, inputs);
+    } else {
+      console.log("Target environment is terminating. Exiting...");
+      process.exit(1);
+    }
   } else if (targetEnv.Status !== "Ready") {
-    console.log("Target environment is not ready. Waiting...");
-    const interval = setDescribeEventsInterval(client, targetEnv.EnvironmentId);
-    await waitUntilEnvironmentExists(
-      { client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
-      { EnvironmentIds: [targetEnv.EnvironmentId] }
-    );
-    clearInterval(interval);
-    return getTargetEnv(client, inputs);
+    if (inputs.waitForEnvironment) {
+      console.log("Target environment is not ready. Waiting...");
+      const interval = setDescribeEventsInterval(
+        client,
+        targetEnv.EnvironmentId
+      );
+      await waitUntilEnvironmentExists(
+        { client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
+        { EnvironmentIds: [targetEnv.EnvironmentId] }
+      );
+      clearInterval(interval);
+      return getTargetEnv(client, inputs);
+    } else {
+      console.log("Target environment is not ready. Exiting...");
+      process.exit(1);
+    }
   }
 
   switch (targetEnv.Health) {
@@ -54,7 +70,7 @@ export async function getTargetEnv(
           targetEnv.EnvironmentId,
           targetEnv.EnvironmentName
         );
-        return null;
+        return getTargetEnv(client, inputs);
       } else {
         console.log("Exiting...");
         process.exit(1);
@@ -68,7 +84,7 @@ export async function getTargetEnv(
           targetEnv.EnvironmentId,
           targetEnv.EnvironmentName
         );
-        return null;
+        return getTargetEnv(client, inputs);
       } else {
         console.log("Exiting...");
         process.exit(1);
@@ -82,7 +98,7 @@ export async function getTargetEnv(
           targetEnv.EnvironmentId,
           targetEnv.EnvironmentName
         );
-        return null;
+        return getTargetEnv(client, inputs);
       } else {
         console.log("Exiting...");
         process.exit(1);

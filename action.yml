@@ -55,6 +55,10 @@ inputs:
   version_label:
     description: "Version label to use for the new application version."
     required: true
+  wait_for_environment:
+    description: "Whether to wait for an environment to update or terminate. If set to false, the action will exit with a non-error code during deployment, or exit with an error code when the environment is terminating or otherwise not ready."
+    required: true
+    default: true
 outputs:
   target_env:
     description: "Name of the target environment, to which the new application version should be deployed"

@@ -29,6 +29,9 @@ export function getInputs() {
         required: false,
       }) || undefined,
     versionLabel: core.getInput("version_label", { required: true }),
+    waitForEnvironment: core.getBooleanInput("wait_for_environment", {
+      required: true,
+    }),
   };
 }
 

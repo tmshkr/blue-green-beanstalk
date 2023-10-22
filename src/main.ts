@@ -36,7 +36,7 @@ export async function main(inputs: ActionInputs) {
 
   if (inputs.deploy) {
     if (targetEnv) {
-      await deploy(client, targetEnv, applicationVersion);
+      await deploy(client, inputs, targetEnv, applicationVersion);
     } else {
       targetEnv = await createEnvironment(client, inputs, applicationVersion);
     }
