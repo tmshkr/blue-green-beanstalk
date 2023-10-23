@@ -57,7 +57,7 @@ export async function createEnvironment(
   );
 
   if (!inputs.waitForEnvironment) {
-    process.exit(0);
+    return newEnv;
   }
 
   const interval = setDescribeEventsInterval(

@@ -13,8 +13,9 @@ export async function terminateEnvironment(
   environmentName: string
 ): Promise<void> {
   if (!inputs.terminateUnhealthyEnvironment) {
-    console.log("terminate_unhealthy_environment is set to false. Exiting...");
-    process.exit(1);
+    throw new Error(
+      "Target environment is unhealthy and terminate_unhealthy_environment is set to false."
+    );
   }
 
   console.log(`Terminating environment ${environmentId} ${environmentName}...`);
@@ -37,6 +38,8 @@ export async function terminateEnvironment(
     );
     clearInterval(interval);
   } else {
-    process.exit(1);
+    throw new Error(
+      "Target environment is terminating and wait_for_environment is set to false."
+    );
   }
 }

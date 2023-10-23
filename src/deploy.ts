@@ -24,7 +24,7 @@ export async function deploy(
   );
 
   if (!inputs.waitForEnvironment) {
-    process.exit(0);
+    return;
   }
 
   const interval = setDescribeEventsInterval(

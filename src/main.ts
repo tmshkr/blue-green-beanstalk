@@ -32,7 +32,12 @@ export async function main(inputs: ActionInputs) {
   });
 
   const applicationVersion = await getApplicationVersion(client, inputs);
-  let targetEnv = await getTargetEnv(client, inputs);
+  try {
+    var targetEnv = await getTargetEnv(client, inputs);
+  } catch (err) {
+    core.setFailed(err.message);
+    return Promise.reject(err);
+  }
 
   if (inputs.deploy) {
     if (targetEnv) {
@@ -40,7 +45,7 @@ export async function main(inputs: ActionInputs) {
     } else {
       targetEnv = await createEnvironment(client, inputs, applicationVersion);
     }
-    if (inputs.swapCNAMES) {
+    if (inputs.swapCNAMES && inputs.waitForEnvironment) {
       await swapCNAMES(client, inputs);
     }
   }
