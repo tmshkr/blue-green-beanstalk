@@ -34,11 +34,10 @@ export async function getTargetEnv(
       );
       clearInterval(interval);
       return getTargetEnv(client, inputs);
-    } else {
+    } else
       throw new Error(
         "Target environment is terminating and wait_for_environment is set to false."
       );
-    }
   } else if (targetEnv.Status !== "Ready") {
     if (inputs.waitForEnvironment) {
       console.log("Target environment is not ready. Waiting...");
@@ -52,11 +51,10 @@ export async function getTargetEnv(
       );
       clearInterval(interval);
       return getTargetEnv(client, inputs);
-    } else {
+    } else
       throw new Error(
         "Target environment is not ready and wait_for_environment is set to false."
       );
-    }
   }
 
   switch (targetEnv.Health) {

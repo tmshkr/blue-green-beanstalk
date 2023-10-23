@@ -5,7 +5,6 @@ import {
 
 import { main } from "./main";
 import { spinDownEnvironment } from "./utils/spinDownEnvironment";
-import { time } from "console";
 const { randomBytes } = require("node:crypto");
 
 const region = "us-west-2";
@@ -13,7 +12,7 @@ const ebClient = new ElasticBeanstalkClient();
 jest.setTimeout(1000 * 60 * 10);
 
 describe("checkInputs", () => {
-  const key = randomBytes(4).toString("hex");
+  const key = randomBytes(3).toString("hex");
   it("should reject with an error when blueEnv and greenEnv are the same", () => {
     expect(
       async () =>
@@ -62,7 +61,7 @@ describe("checkInputs", () => {
 });
 
 describe("main", () => {
-  const key = randomBytes(4).toString("hex");
+  const key = randomBytes(3).toString("hex");
   const inputs = {
     appName: `test-app-${key}`,
     awsRegion: region,
@@ -188,30 +187,36 @@ describe("main", () => {
 
   describe("terminate_unhealthy_environment", () => {
     it("should not terminate the environment when terminate_unhealthy_environment is set to false", async () => {
-      expect(
+      try {
         await main({
           ...inputs,
           terminateUnhealthyEnvironment: false,
           deploy: false,
-        })
-      ).rejects.toThrow(
-        "Target environment is unhealthy and terminate_unhealthy_environment is set to false."
-      );
+        });
+        throw new Error("Should not reach here");
+      } catch (err) {
+        expect(err.message).toEqual(
+          "Target environment is unhealthy and terminate_unhealthy_environment is set to false."
+        );
+      }
     });
   });
 
   describe("wait_for_environment", () => {
     it("should not wait for the environment to be healthy when wait_for_environment is set to false", async () => {
-      expect(
+      try {
         await main({
           ...inputs,
           terminateUnhealthyEnvironment: true,
           waitForEnvironment: false,
           deploy: false,
-        })
-      ).rejects.toThrow(
-        "Target environment is terminating and wait_for_environment is set to false."
-      );
+        });
+        throw new Error("Should not reach here");
+      } catch (err) {
+        expect(err.message).toEqual(
+          "Target environment is terminating and wait_for_environment is set to false."
+        );
+      }
     });
   });
 });

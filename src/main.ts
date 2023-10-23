@@ -21,34 +21,29 @@ function checkInputs(inputs: ActionInputs) {
 export async function main(inputs: ActionInputs) {
   try {
     checkInputs(inputs);
+
+    const client = new ElasticBeanstalkClient({
+      region: inputs.awsRegion,
+      credentials: getCredentials(),
+    });
+
+    const applicationVersion = await getApplicationVersion(client, inputs);
+    let targetEnv = await getTargetEnv(client, inputs);
+
+    if (inputs.deploy) {
+      if (targetEnv) {
+        await deploy(client, inputs, targetEnv, applicationVersion);
+      } else {
+        targetEnv = await createEnvironment(client, inputs, applicationVersion);
+      }
+      if (inputs.swapCNAMES && inputs.waitForEnvironment) {
+        await swapCNAMES(client, inputs);
+      }
+    }
+
+    core.setOutput("target_env", targetEnv?.EnvironmentName || "");
   } catch (err) {
     core.setFailed(err.message);
     return Promise.reject(err);
   }
-
-  const client = new ElasticBeanstalkClient({
-    region: inputs.awsRegion,
-    credentials: getCredentials(),
-  });
-
-  const applicationVersion = await getApplicationVersion(client, inputs);
-  try {
-    var targetEnv = await getTargetEnv(client, inputs);
-  } catch (err) {
-    core.setFailed(err.message);
-    return Promise.reject(err);
-  }
-
-  if (inputs.deploy) {
-    if (targetEnv) {
-      await deploy(client, inputs, targetEnv, applicationVersion);
-    } else {
-      targetEnv = await createEnvironment(client, inputs, applicationVersion);
-    }
-    if (inputs.swapCNAMES && inputs.waitForEnvironment) {
-      await swapCNAMES(client, inputs);
-    }
-  }
-
-  core.setOutput("target_env", targetEnv?.EnvironmentName || "");
 }
