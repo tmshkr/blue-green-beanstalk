@@ -48041,6 +48041,21 @@ exports.createConfigValueProvider = createConfigValueProvider;
 
 /***/ }),
 
+/***/ 31518:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getEndpointFromConfig = void 0;
+const node_config_provider_1 = __nccwpck_require__(33461);
+const getEndpointUrlConfig_1 = __nccwpck_require__(7574);
+const getEndpointFromConfig = async (serviceId) => (0, node_config_provider_1.loadConfig)((0, getEndpointUrlConfig_1.getEndpointUrlConfig)(serviceId))();
+exports.getEndpointFromConfig = getEndpointFromConfig;
+
+
+/***/ }),
+
 /***/ 73929:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -48050,7 +48065,15 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveParams = exports.getEndpointFromInstructions = void 0;
 const service_customizations_1 = __nccwpck_require__(13105);
 const createConfigValueProvider_1 = __nccwpck_require__(465);
+const getEndpointFromConfig_1 = __nccwpck_require__(31518);
+const toEndpointV1_1 = __nccwpck_require__(38938);
 const getEndpointFromInstructions = async (commandInput, instructionsSupplier, clientConfig, context) => {
+    if (!clientConfig.endpoint) {
+        const endpointFromConfig = await (0, getEndpointFromConfig_1.getEndpointFromConfig)(clientConfig.serviceId || "");
+        if (endpointFromConfig) {
+            clientConfig.endpoint = () => Promise.resolve((0, toEndpointV1_1.toEndpointV1)(endpointFromConfig));
+        }
+    }
     const endpointParams = await (0, exports.resolveParams)(commandInput, instructionsSupplier, clientConfig);
     if (typeof clientConfig.endpointProvider !== "function") {
         throw new Error("config.endpointProvider is not set.");
@@ -48088,6 +48111,49 @@ const resolveParams = async (commandInput, instructionsSupplier, clientConfig) =
     return endpointParams;
 };
 exports.resolveParams = resolveParams;
+
+
+/***/ }),
+
+/***/ 7574:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getEndpointUrlConfig = void 0;
+const shared_ini_file_loader_1 = __nccwpck_require__(43507);
+const ENV_ENDPOINT_URL = "AWS_ENDPOINT_URL";
+const CONFIG_ENDPOINT_URL = "endpoint_url";
+const getEndpointUrlConfig = (serviceId) => ({
+    environmentVariableSelector: (env) => {
+        const serviceSuffixParts = serviceId.split(" ").map((w) => w.toUpperCase());
+        const serviceEndpointUrl = env[[ENV_ENDPOINT_URL, ...serviceSuffixParts].join("_")];
+        if (serviceEndpointUrl)
+            return serviceEndpointUrl;
+        const endpointUrl = env[ENV_ENDPOINT_URL];
+        if (endpointUrl)
+            return endpointUrl;
+        return undefined;
+    },
+    configFileSelector: (profile, config) => {
+        if (config && profile.services) {
+            const servicesSection = config[["services", profile.services].join(shared_ini_file_loader_1.CONFIG_PREFIX_SEPARATOR)];
+            if (servicesSection) {
+                const servicePrefixParts = serviceId.split(" ").map((w) => w.toLowerCase());
+                const endpointUrl = servicesSection[[servicePrefixParts.join("_"), CONFIG_ENDPOINT_URL].join(shared_ini_file_loader_1.CONFIG_PREFIX_SEPARATOR)];
+                if (endpointUrl)
+                    return endpointUrl;
+            }
+        }
+        const endpointUrl = profile[CONFIG_ENDPOINT_URL];
+        if (endpointUrl)
+            return endpointUrl;
+        return undefined;
+    },
+    default: undefined,
+});
+exports.getEndpointUrlConfig = getEndpointUrlConfig;
 
 
 /***/ }),
@@ -49246,7 +49312,8 @@ const fromSharedConfigFiles = (configSelector, { preferredFile = "config", ...in
         ? { ...profileFromCredentials, ...profileFromConfig }
         : { ...profileFromConfig, ...profileFromCredentials };
     try {
-        const configValue = configSelector(mergedProfile);
+        const cfgFile = preferredFile === "config" ? configFile : credentialsFile;
+        const configValue = configSelector(mergedProfile, cfgFile);
         if (configValue === undefined) {
             throw new Error();
         }
@@ -50560,6 +50627,35 @@ exports.isServerError = isServerError;
 
 /***/ }),
 
+/***/ 46062:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getConfigData = void 0;
+const types_1 = __nccwpck_require__(55756);
+const loadSharedConfigFiles_1 = __nccwpck_require__(41879);
+const getConfigData = (data) => Object.entries(data)
+    .filter(([key]) => {
+    const sections = key.split(loadSharedConfigFiles_1.CONFIG_PREFIX_SEPARATOR);
+    if (sections.length === 2 && Object.values(types_1.IniSectionType).includes(sections[0])) {
+        return true;
+    }
+    return false;
+})
+    .reduce((acc, [key, value]) => {
+    const updatedKey = key.startsWith(types_1.IniSectionType.PROFILE) ? key.split(loadSharedConfigFiles_1.CONFIG_PREFIX_SEPARATOR)[1] : key;
+    acc[updatedKey] = value;
+    return acc;
+}, {
+    ...(data.default && { default: data.default }),
+});
+exports.getConfigData = getConfigData;
+
+
+/***/ }),
+
 /***/ 47237:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -50626,24 +50722,6 @@ exports.getHomeDir = getHomeDir;
 
 /***/ }),
 
-/***/ 32041:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getProfileData = void 0;
-const profileKeyRegex = /^profile\s(["'])?([^\1]+)\1$/;
-const getProfileData = (data) => Object.entries(data)
-    .filter(([key]) => profileKeyRegex.test(key))
-    .reduce((acc, [key, value]) => ({ ...acc, [profileKeyRegex.exec(key)[2]]: value }), {
-    ...(data.default && { default: data.default }),
-});
-exports.getProfileData = getProfileData;
-
-
-/***/ }),
-
 /***/ 52802:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -50700,16 +50778,17 @@ exports.getSSOTokenFromFile = getSSOTokenFromFile;
 /***/ }),
 
 /***/ 82820:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getSsoSessionData = void 0;
-const ssoSessionKeyRegex = /^sso-session\s(["'])?([^\1]+)\1$/;
+const types_1 = __nccwpck_require__(55756);
+const loadSharedConfigFiles_1 = __nccwpck_require__(41879);
 const getSsoSessionData = (data) => Object.entries(data)
-    .filter(([key]) => ssoSessionKeyRegex.test(key))
-    .reduce((acc, [key, value]) => ({ ...acc, [ssoSessionKeyRegex.exec(key)[2]]: value }), {});
+    .filter(([key]) => key.startsWith(types_1.IniSectionType.SSO_SESSION + loadSharedConfigFiles_1.CONFIG_PREFIX_SEPARATOR))
+    .reduce((acc, [key, value]) => ({ ...acc, [key.split(loadSharedConfigFiles_1.CONFIG_PREFIX_SEPARATOR)[1]]: value }), {});
 exports.getSsoSessionData = getSsoSessionData;
 
 
@@ -50740,13 +50819,14 @@ tslib_1.__exportStar(__nccwpck_require__(63191), exports);
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.loadSharedConfigFiles = void 0;
+exports.loadSharedConfigFiles = exports.CONFIG_PREFIX_SEPARATOR = void 0;
+const getConfigData_1 = __nccwpck_require__(46062);
 const getConfigFilepath_1 = __nccwpck_require__(47237);
 const getCredentialsFilepath_1 = __nccwpck_require__(99036);
-const getProfileData_1 = __nccwpck_require__(32041);
 const parseIni_1 = __nccwpck_require__(54262);
 const slurpFile_1 = __nccwpck_require__(19155);
 const swallowError = () => ({});
+exports.CONFIG_PREFIX_SEPARATOR = ".";
 const loadSharedConfigFiles = async (init = {}) => {
     const { filepath = (0, getCredentialsFilepath_1.getCredentialsFilepath)(), configFilepath = (0, getConfigFilepath_1.getConfigFilepath)() } = init;
     const parsedFiles = await Promise.all([
@@ -50754,7 +50834,7 @@ const loadSharedConfigFiles = async (init = {}) => {
             ignoreCache: init.ignoreCache,
         })
             .then(parseIni_1.parseIni)
-            .then(getProfileData_1.getProfileData)
+            .then(getConfigData_1.getConfigData)
             .catch(swallowError),
         (0, slurpFile_1.slurpFile)(filepath, {
             ignoreCache: init.ignoreCache,
@@ -50823,37 +50903,59 @@ exports.mergeConfigFiles = mergeConfigFiles;
 /***/ }),
 
 /***/ 54262:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.parseIni = void 0;
+const types_1 = __nccwpck_require__(55756);
+const loadSharedConfigFiles_1 = __nccwpck_require__(41879);
+const prefixKeyRegex = /^([\w-]+)\s(["'])?([\w-@\+]+)\2$/;
 const profileNameBlockList = ["__proto__", "profile __proto__"];
 const parseIni = (iniData) => {
     const map = {};
     let currentSection;
-    for (let line of iniData.split(/\r?\n/)) {
-        line = line.split(/(^|\s)[;#]/)[0].trim();
-        const isSection = line[0] === "[" && line[line.length - 1] === "]";
+    let currentSubSection;
+    for (const iniLine of iniData.split(/\r?\n/)) {
+        const trimmedLine = iniLine.split(/(^|\s)[;#]/)[0].trim();
+        const isSection = trimmedLine[0] === "[" && trimmedLine[trimmedLine.length - 1] === "]";
         if (isSection) {
-            currentSection = line.substring(1, line.length - 1);
-            if (profileNameBlockList.includes(currentSection)) {
-                throw new Error(`Found invalid profile name "${currentSection}"`);
+            currentSection = undefined;
+            currentSubSection = undefined;
+            const sectionName = trimmedLine.substring(1, trimmedLine.length - 1);
+            const matches = prefixKeyRegex.exec(sectionName);
+            if (matches) {
+                const [, prefix, , name] = matches;
+                if (Object.values(types_1.IniSectionType).includes(prefix)) {
+                    currentSection = [prefix, name].join(loadSharedConfigFiles_1.CONFIG_PREFIX_SEPARATOR);
+                }
+            }
+            else {
+                currentSection = sectionName;
+            }
+            if (profileNameBlockList.includes(sectionName)) {
+                throw new Error(`Found invalid profile name "${sectionName}"`);
             }
         }
         else if (currentSection) {
-            const indexOfEqualsSign = line.indexOf("=");
-            const start = 0;
-            const end = line.length - 1;
-            const isAssignment = indexOfEqualsSign !== -1 && indexOfEqualsSign !== start && indexOfEqualsSign !== end;
-            if (isAssignment) {
+            const indexOfEqualsSign = trimmedLine.indexOf("=");
+            if (![0, -1].includes(indexOfEqualsSign)) {
                 const [name, value] = [
-                    line.substring(0, indexOfEqualsSign).trim(),
-                    line.substring(indexOfEqualsSign + 1).trim(),
+                    trimmedLine.substring(0, indexOfEqualsSign).trim(),
+                    trimmedLine.substring(indexOfEqualsSign + 1).trim(),
                 ];
-                map[currentSection] = map[currentSection] || {};
-                map[currentSection][name] = value;
+                if (value === "") {
+                    currentSubSection = name;
+                }
+                else {
+                    if (currentSubSection && iniLine.trimStart() === iniLine) {
+                        currentSubSection = undefined;
+                    }
+                    map[currentSection] = map[currentSection] || {};
+                    const key = currentSubSection ? [currentSubSection, name].join(loadSharedConfigFiles_1.CONFIG_PREFIX_SEPARATOR) : name;
+                    map[currentSection][key] = value;
+                }
             }
         }
     }
@@ -53156,6 +53258,13 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.IniSectionType = void 0;
+var IniSectionType;
+(function (IniSectionType) {
+    IniSectionType["PROFILE"] = "profile";
+    IniSectionType["SSO_SESSION"] = "sso-session";
+    IniSectionType["SERVICES"] = "services";
+})(IniSectionType = exports.IniSectionType || (exports.IniSectionType = {}));
 
 
 /***/ }),
@@ -58630,6 +58739,9 @@ function getInputs() {
             required: false,
         }) || undefined,
         versionLabel: core.getInput("version_label", { required: true }),
+        waitForEnvironment: core.getBooleanInput("wait_for_environment", {
+            required: true,
+        }),
     };
 }
 function getCredentials() {
@@ -58788,16 +58900,23 @@ var terminateEnvironment_awaiter = (undefined && undefined.__awaiter) || functio
 };
 
 
-function terminateEnvironment(client, environmentId, environmentName) {
+function terminateEnvironment(client, inputs, environmentId, environmentName) {
     return terminateEnvironment_awaiter(this, void 0, void 0, function* () {
+        if (!inputs.terminateUnhealthyEnvironment) {
+            throw new Error("Target environment is unhealthy and terminate_unhealthy_environment is set to false.");
+        }
         console.log(`Terminating environment ${environmentId} ${environmentName}...`);
         const startTime = new Date();
         yield client.send(new dist_cjs.TerminateEnvironmentCommand({
             EnvironmentId: environmentId,
         }));
-        const interval = setDescribeEventsInterval(client, environmentId, startTime);
-        yield (0,dist_cjs.waitUntilEnvironmentTerminated)({ client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 }, { EnvironmentIds: [environmentId] });
-        clearInterval(interval);
+        if (inputs.waitForEnvironment) {
+            const interval = setDescribeEventsInterval(client, environmentId, startTime);
+            yield (0,dist_cjs.waitUntilEnvironmentTerminated)({ client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 }, { EnvironmentIds: [environmentId] });
+            clearInterval(interval);
+        }
+        else
+            throw new Error("Target environment is terminating and wait_for_environment is set to false.");
     });
 }
 
@@ -58824,60 +58943,46 @@ function getTargetEnv(client, inputs) {
             return null;
         }
         if (targetEnv.Status === "Terminating") {
-            console.log("Target environment is terminating. Waiting...");
-            const interval = setDescribeEventsInterval(client, targetEnv.EnvironmentId);
-            yield (0,dist_cjs.waitUntilEnvironmentTerminated)({ client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 }, { EnvironmentIds: [targetEnv.EnvironmentId] });
-            clearInterval(interval);
-            return getTargetEnv(client, inputs);
+            if (inputs.waitForEnvironment) {
+                console.log("Target environment is terminating. Waiting...");
+                const interval = setDescribeEventsInterval(client, targetEnv.EnvironmentId);
+                yield (0,dist_cjs.waitUntilEnvironmentTerminated)({ client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 }, { EnvironmentIds: [targetEnv.EnvironmentId] });
+                clearInterval(interval);
+                return getTargetEnv(client, inputs);
+            }
+            else
+                throw new Error("Target environment is terminating and wait_for_environment is set to false.");
         }
         else if (targetEnv.Status !== "Ready") {
-            console.log("Target environment is not ready. Waiting...");
-            const interval = setDescribeEventsInterval(client, targetEnv.EnvironmentId);
-            yield (0,dist_cjs.waitUntilEnvironmentExists)({ client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 }, { EnvironmentIds: [targetEnv.EnvironmentId] });
-            clearInterval(interval);
-            return getTargetEnv(client, inputs);
+            if (inputs.waitForEnvironment) {
+                console.log("Target environment is not ready. Waiting...");
+                const interval = setDescribeEventsInterval(client, targetEnv.EnvironmentId);
+                yield (0,dist_cjs.waitUntilEnvironmentExists)({ client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 }, { EnvironmentIds: [targetEnv.EnvironmentId] });
+                clearInterval(interval);
+                return getTargetEnv(client, inputs);
+            }
+            else
+                throw new Error("Target environment is not ready and wait_for_environment is set to false.");
         }
         switch (targetEnv.Health) {
             case "Green":
                 console.log("Target environment's health is Green.");
-                break;
+                return targetEnv;
             case "Yellow":
                 console.log("Target environment's health is Yellow.");
-                if (inputs.terminateUnhealthyEnvironment) {
-                    console.log("Terminating unhealthy environment...");
-                    yield terminateEnvironment(client, targetEnv.EnvironmentId, targetEnv.EnvironmentName);
-                    return null;
-                }
-                else {
-                    console.log("Exiting...");
-                    process.exit(1);
-                }
+                yield terminateEnvironment(client, inputs, targetEnv.EnvironmentId, targetEnv.EnvironmentName);
+                return getTargetEnv(client, inputs);
             case "Red":
                 console.log("Target environment's health is Red.");
-                if (inputs.terminateUnhealthyEnvironment) {
-                    console.log("Terminating unhealthy environment...");
-                    yield terminateEnvironment(client, targetEnv.EnvironmentId, targetEnv.EnvironmentName);
-                    return null;
-                }
-                else {
-                    console.log("Exiting...");
-                    process.exit(1);
-                }
+                yield terminateEnvironment(client, inputs, targetEnv.EnvironmentId, targetEnv.EnvironmentName);
+                return getTargetEnv(client, inputs);
             case "Grey":
                 console.log("Target environment's health is Grey.");
-                if (inputs.terminateUnhealthyEnvironment) {
-                    console.log("Terminating unhealthy environment...");
-                    yield terminateEnvironment(client, targetEnv.EnvironmentId, targetEnv.EnvironmentName);
-                    return null;
-                }
-                else {
-                    console.log("Exiting...");
-                    process.exit(1);
-                }
+                yield terminateEnvironment(client, inputs, targetEnv.EnvironmentId, targetEnv.EnvironmentName);
+                return getTargetEnv(client, inputs);
             default:
                 throw new Error("Target environment is unknown.");
         }
-        return targetEnv;
     });
 }
 
@@ -58950,6 +59055,9 @@ function createEnvironment(client, inputs, applicationVersion) {
             VersionLabel: applicationVersion.VersionLabel,
         }));
         console.log(`Creating environment ${newEnv.EnvironmentId} ${newEnv.EnvironmentName}...`);
+        if (!inputs.waitForEnvironment) {
+            return newEnv;
+        }
         const interval = setDescribeEventsInterval(client, newEnv.EnvironmentId, startTime);
         yield (0,dist_cjs.waitUntilEnvironmentExists)({ client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 }, { EnvironmentIds: [newEnv.EnvironmentId] });
         clearInterval(interval);
@@ -58969,7 +59077,7 @@ var deploy_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _a
 };
 
 
-function deploy(client, targetEnv, applicationVersion) {
+function deploy(client, inputs, targetEnv, applicationVersion) {
     return deploy_awaiter(this, void 0, void 0, function* () {
         console.log(`Starting deployment to to ${targetEnv.EnvironmentName}`);
         const startTime = new Date();
@@ -58977,6 +59085,9 @@ function deploy(client, targetEnv, applicationVersion) {
             EnvironmentId: targetEnv.EnvironmentId,
             VersionLabel: applicationVersion.VersionLabel,
         }));
+        if (!inputs.waitForEnvironment) {
+            return;
+        }
         const interval = setDescribeEventsInterval(client, targetEnv.EnvironmentId, startTime);
         yield (0,dist_cjs.waitUntilEnvironmentUpdated)({ client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 }, { EnvironmentIds: [targetEnv.EnvironmentId] });
         clearInterval(interval);
@@ -59051,29 +59162,29 @@ function main(inputs) {
     return main_awaiter(this, void 0, void 0, function* () {
         try {
             checkInputs(inputs);
+            const client = new dist_cjs.ElasticBeanstalkClient({
+                region: inputs.awsRegion,
+                credentials: getCredentials(),
+            });
+            const applicationVersion = yield getApplicationVersion(client, inputs);
+            let targetEnv = yield getTargetEnv(client, inputs);
+            if (inputs.deploy) {
+                if (targetEnv) {
+                    yield deploy(client, inputs, targetEnv, applicationVersion);
+                }
+                else {
+                    targetEnv = yield createEnvironment(client, inputs, applicationVersion);
+                }
+                if (inputs.swapCNAMES && inputs.waitForEnvironment) {
+                    yield swapCNAMES(client, inputs);
+                }
+            }
+            core.setOutput("target_env", (targetEnv === null || targetEnv === void 0 ? void 0 : targetEnv.EnvironmentName) || "");
         }
         catch (err) {
             core.setFailed(err.message);
             return Promise.reject(err);
         }
-        const client = new dist_cjs.ElasticBeanstalkClient({
-            region: inputs.awsRegion,
-            credentials: getCredentials(),
-        });
-        const applicationVersion = yield getApplicationVersion(client, inputs);
-        let targetEnv = yield getTargetEnv(client, inputs);
-        if (inputs.deploy) {
-            if (targetEnv) {
-                yield deploy(client, targetEnv, applicationVersion);
-            }
-            else {
-                targetEnv = yield createEnvironment(client, inputs, applicationVersion);
-            }
-            if (inputs.swapCNAMES) {
-                yield swapCNAMES(client, inputs);
-            }
-        }
-        core.setOutput("target_env", (targetEnv === null || targetEnv === void 0 ? void 0 : targetEnv.EnvironmentName) || "");
     });
 }
 
