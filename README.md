@@ -40,7 +40,7 @@ jobs:
       - name: Generate source bundle
         run: echo ${{ github.ref_name }} > ENVIRONMENT && zip -r bundle.zip . -x '*.git*'
       - name: Deploy
-        uses: tmshkr/blue-green-beanstalk@v1
+        uses: tmshkr/blue-green-beanstalk@latest
         with:
           app_name: "test-app"
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
