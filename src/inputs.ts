@@ -4,40 +4,36 @@ export type ActionInputs = ReturnType<typeof getInputs>;
 export function getInputs() {
   const inputs = {
     appName: core.getInput("app_name", { required: true }),
-    awsRegion:
-      core.getInput("aws_region", { required: false }) ||
-      process.env.AWS_REGION,
+    awsRegion: core.getInput("aws_region") || process.env.AWS_REGION,
     blueEnv: core.getInput("blue_env", { required: true }),
     deploy: core.getBooleanInput("deploy", { required: true }),
     greenEnv: core.getInput("green_env", { required: true }),
     platformBranchName: core.getInput("platform_branch_name", {
       required: true,
     }),
-    productionCNAME:
-      core.getInput("production_cname", { required: false }) || undefined,
+    productionCNAME: core.getInput("production_cname") || undefined,
     promote: core.getBooleanInput("promote", { required: true }),
-    sourceBundle:
-      core.getInput("source_bundle", { required: false }) || undefined,
-    stagingCNAME:
-      core.getInput("staging_cname", { required: false }) || undefined,
+    sourceBundle: core.getInput("source_bundle") || undefined,
+    stagingCNAME: core.getInput("staging_cname") || undefined,
     strategy: core.getInput("strategy", { required: true }),
-    templateName:
-      core.getInput("template_name", { required: false }) || undefined,
+    templateName: core.getInput("template_name") || undefined,
     terminateUnhealthyEnvironment: core.getBooleanInput(
       "terminate_unhealthy_environment",
       { required: true }
     ),
-    versionDescription:
-      core.getInput("version_description", {
-        required: false,
-      }) || undefined,
-    versionLabel: core.getInput("version_label", { required: true }),
+    versionDescription: core.getInput("version_description") || undefined,
+    versionLabel: core.getInput("version_label") || undefined,
     waitForEnvironment: core.getBooleanInput("wait_for_environment", {
       required: true,
     }),
   };
 
-  checkInputs(inputs);
+  try {
+    checkInputs(inputs);
+  } catch (err) {
+    core.setFailed(err.message);
+    throw err;
+  }
   return inputs;
 }
 
@@ -56,8 +52,17 @@ function checkInputs(inputs: ActionInputs) {
   }
 
   if (
+    (inputs.versionLabel && !inputs.sourceBundle) ||
+    (!inputs.versionLabel && inputs.sourceBundle)
+  ) {
+    throw new Error(
+      "version_label and source_bundle must be provided together"
+    );
+  }
+
+  if (
     ![DeploymentStrategy.SharedALB, DeploymentStrategy.SwapCNAMEs].includes(
-      inputs.strategy as unknown as DeploymentStrategy
+      inputs.strategy as unknown & DeploymentStrategy
     )
   ) {
     throw new Error("strategy must be one of: shared_alb, swap_cnames");
