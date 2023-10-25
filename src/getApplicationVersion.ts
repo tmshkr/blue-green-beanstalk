@@ -37,6 +37,7 @@ async function createApplicationVersion(
   client: ElasticBeanstalkClient,
   inputs: ActionInputs
 ) {
+  if (!inputs.versionLabel) return null;
   let SourceBundle;
 
   if (inputs.sourceBundle) {

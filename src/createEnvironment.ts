@@ -34,7 +34,7 @@ async function getPlatformArn(
 export async function createEnvironment(
   client: ElasticBeanstalkClient,
   inputs: ActionInputs,
-  applicationVersion: ApplicationVersionDescription
+  applicationVersion?: ApplicationVersionDescription
 ) {
   const { prodEnv } = await getEnvironments(client, inputs);
 
@@ -46,16 +46,16 @@ export async function createEnvironment(
       newEnv = await createSharedALBEnv(
         client,
         inputs,
-        applicationVersion,
-        prodEnv
+        prodEnv,
+        applicationVersion
       );
       break;
     case DeploymentStrategy.SwapCNAMEs:
       newEnv = await createSwapCNAMEsEnv(
         client,
         inputs,
-        applicationVersion,
-        prodEnv
+        prodEnv,
+        applicationVersion
       );
       break;
 
@@ -87,15 +87,15 @@ export async function createEnvironment(
 async function createSharedALBEnv(
   client: ElasticBeanstalkClient,
   inputs: ActionInputs,
-  applicationVersion: ApplicationVersionDescription,
-  prodEnv: EnvironmentDescription | undefined
+  prodEnv: EnvironmentDescription | undefined,
+  applicationVersion?: ApplicationVersionDescription
 ) {}
 
 async function createSwapCNAMEsEnv(
   client: ElasticBeanstalkClient,
   inputs: ActionInputs,
-  applicationVersion: ApplicationVersionDescription,
-  prodEnv: EnvironmentDescription | undefined
+  prodEnv: EnvironmentDescription | undefined,
+  applicationVersion?: ApplicationVersionDescription
 ) {
   return await client.send(
     new CreateEnvironmentCommand({
@@ -108,7 +108,7 @@ async function createSwapCNAMEsEnv(
       CNAMEPrefix: prodEnv ? inputs.stagingCNAME : inputs.productionCNAME,
       PlatformArn: await getPlatformArn(client, inputs.platformBranchName),
       OptionSettings: inputs.templateName ? undefined : defaultOptionSettings,
-      VersionLabel: applicationVersion.VersionLabel,
+      VersionLabel: applicationVersion?.VersionLabel,
     })
   );
 }

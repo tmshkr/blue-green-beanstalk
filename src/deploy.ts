@@ -12,14 +12,14 @@ export async function deploy(
   client: ElasticBeanstalkClient,
   inputs: ActionInputs,
   targetEnv: EnvironmentDescription,
-  applicationVersion: ApplicationVersionDescription
+  applicationVersion?: ApplicationVersionDescription
 ) {
   console.log(`Starting deployment to to ${targetEnv.EnvironmentName}`);
   const startTime = new Date();
   await client.send(
     new UpdateEnvironmentCommand({
       EnvironmentId: targetEnv.EnvironmentId,
-      VersionLabel: applicationVersion.VersionLabel,
+      VersionLabel: applicationVersion?.VersionLabel,
     })
   );
 
