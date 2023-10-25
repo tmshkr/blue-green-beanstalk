@@ -41,7 +41,7 @@ export function getInputs() {
   return inputs;
 }
 
-enum DeploymentStrategy {
+export enum DeploymentStrategy {
   SharedALB = "shared_alb",
   SwapCNAMEs = "swap_cnames",
 }

@@ -2,11 +2,12 @@ import {
   ApplicationVersionDescription,
   CreateEnvironmentCommand,
   ElasticBeanstalkClient,
+  EnvironmentDescription,
   ListPlatformVersionsCommand,
   waitUntilEnvironmentExists,
 } from "@aws-sdk/client-elastic-beanstalk";
 
-import { ActionInputs } from "./inputs";
+import { ActionInputs, DeploymentStrategy } from "./inputs";
 import { defaultOptionSettings } from "./config/defaultOptionSettings";
 import { getEnvironments } from "./getEnvironments";
 import { setDescribeEventsInterval } from "./setDescribeEventsInterval";
@@ -38,20 +39,30 @@ export async function createEnvironment(
   const { prodEnv } = await getEnvironments(client, inputs);
 
   const startTime = new Date();
-  const newEnv = await client.send(
-    new CreateEnvironmentCommand({
-      ApplicationName: applicationVersion.ApplicationName,
-      TemplateName: inputs.templateName,
-      EnvironmentName:
-        prodEnv?.EnvironmentName === inputs.blueEnv
-          ? inputs.greenEnv
-          : inputs.blueEnv,
-      CNAMEPrefix: prodEnv ? inputs.stagingCNAME : inputs.productionCNAME,
-      PlatformArn: await getPlatformArn(client, inputs.platformBranchName),
-      OptionSettings: inputs.templateName ? undefined : defaultOptionSettings,
-      VersionLabel: applicationVersion.VersionLabel,
-    })
-  );
+  let newEnv;
+
+  switch (inputs.strategy) {
+    case DeploymentStrategy.SharedALB:
+      newEnv = await createSharedALBEnv(
+        client,
+        inputs,
+        applicationVersion,
+        prodEnv
+      );
+      break;
+    case DeploymentStrategy.SwapCNAMEs:
+      newEnv = await createSwapCNAMEsEnv(
+        client,
+        inputs,
+        applicationVersion,
+        prodEnv
+      );
+      break;
+
+    default:
+      throw new Error(`Invalid strategy: ${inputs.strategy}`);
+  }
+
   console.log(
     `Creating environment ${newEnv.EnvironmentId} ${newEnv.EnvironmentName}...`
   );
@@ -71,4 +82,33 @@ export async function createEnvironment(
   );
   clearInterval(interval);
   return newEnv;
+}
+
+async function createSharedALBEnv(
+  client: ElasticBeanstalkClient,
+  inputs: ActionInputs,
+  applicationVersion: ApplicationVersionDescription,
+  prodEnv: EnvironmentDescription | undefined
+) {}
+
+async function createSwapCNAMEsEnv(
+  client: ElasticBeanstalkClient,
+  inputs: ActionInputs,
+  applicationVersion: ApplicationVersionDescription,
+  prodEnv: EnvironmentDescription | undefined
+) {
+  return await client.send(
+    new CreateEnvironmentCommand({
+      ApplicationName: applicationVersion.ApplicationName,
+      TemplateName: inputs.templateName,
+      EnvironmentName:
+        prodEnv?.EnvironmentName === inputs.blueEnv
+          ? inputs.greenEnv
+          : inputs.blueEnv,
+      CNAMEPrefix: prodEnv ? inputs.stagingCNAME : inputs.productionCNAME,
+      PlatformArn: await getPlatformArn(client, inputs.platformBranchName),
+      OptionSettings: inputs.templateName ? undefined : defaultOptionSettings,
+      VersionLabel: applicationVersion.VersionLabel,
+    })
+  );
 }
