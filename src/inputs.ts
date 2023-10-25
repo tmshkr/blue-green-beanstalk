@@ -1,7 +1,7 @@
 import * as core from "@actions/core";
 
 export function getInputs() {
-  return {
+  const inputs = {
     appName: core.getInput("app_name", { required: true }),
     awsRegion:
       core.getInput("aws_region", { required: false }) ||
@@ -13,11 +13,12 @@ export function getInputs() {
       required: true,
     }),
     productionCNAME: core.getInput("production_cname", { required: true }),
+    promote: core.getBooleanInput("promote", { required: true }),
     sourceBundle:
       core.getInput("source_bundle", { required: false }) || undefined,
     stagingCNAME:
       core.getInput("staging_cname", { required: false }) || undefined,
-    swapCNAMES: core.getBooleanInput("swap_cnames", { required: true }),
+    strategy: core.getInput("strategy", { required: true }),
     templateName:
       core.getInput("template_name", { required: false }) || undefined,
     terminateUnhealthyEnvironment: core.getBooleanInput(
@@ -33,6 +34,38 @@ export function getInputs() {
       required: true,
     }),
   };
+
+  checkInputs(inputs);
+  return inputs;
+}
+
+enum DeploymentStrategy {
+  SharedALB = "shared_alb",
+  SwapCNAMEs = "swap_cnames",
+}
+
+function checkInputs(inputs: ActionInputs) {
+  if (inputs.blueEnv === inputs.greenEnv) {
+    throw new Error("blue_env and green_env must be different");
+  }
+
+  if (
+    ![DeploymentStrategy.SharedALB, DeploymentStrategy.SwapCNAMEs].includes(
+      inputs.strategy as unknown as DeploymentStrategy
+    )
+  ) {
+    throw new Error("strategy must be one of: shared_alb, swap_cnames");
+  }
+
+  if (inputs.strategy === DeploymentStrategy.SwapCNAMEs) {
+    if (inputs.productionCNAME === inputs.stagingCNAME) {
+      throw new Error("production_cname and staging_cname must be different");
+    }
+  } else if (inputs.productionCNAME || inputs.stagingCNAME) {
+    core.warning(
+      "production_cname and staging_cname are ignored when not using the swap_cnames strategy"
+    );
+  }
 }
 
 export type ActionInputs = ReturnType<typeof getInputs>;
