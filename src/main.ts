@@ -7,21 +7,11 @@ import { createEnvironment } from "./createEnvironment";
 import { deploy } from "./deploy";
 import { swapCNAMES } from "./swapCNAMES";
 import { ActionInputs, getCredentials } from "./inputs";
-
-function checkInputs(inputs: ActionInputs) {
-  if (inputs.blueEnv === inputs.greenEnv) {
-    throw new Error("blue_env and green_env must be different");
-  }
-
-  if (inputs.productionCNAME === inputs.stagingCNAME) {
-    throw new Error("production_cname and staging_cname must be different");
-  }
-}
+import { handleSharedALB } from "./strategies/shared_alb/handleSharedALB";
+import { handleSwapCNAMEs } from "./strategies/swap_cnames/handleSwapCNAMEs";
 
 export async function main(inputs: ActionInputs) {
   try {
-    checkInputs(inputs);
-
     const client = new ElasticBeanstalkClient({
       region: inputs.awsRegion,
       credentials: getCredentials(),
@@ -36,7 +26,7 @@ export async function main(inputs: ActionInputs) {
       } else {
         targetEnv = await createEnvironment(client, inputs, applicationVersion);
       }
-      if (inputs.swapCNAMES && inputs.waitForEnvironment) {
+      if (inputs.promote && inputs.waitForEnvironment) {
         await swapCNAMES(client, inputs);
       }
     }
