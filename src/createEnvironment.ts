@@ -8,9 +8,9 @@ import {
 } from "@aws-sdk/client-elastic-beanstalk";
 
 import { ActionInputs, DeploymentStrategy } from "./inputs";
-import { defaultOptionSettings } from "./config/defaultOptionSettings";
 import { getEnvironments } from "./getEnvironments";
 import { setDescribeEventsInterval } from "./setDescribeEventsInterval";
+import { createLoadBalancer } from "./createLoadBalancer";
 
 async function getPlatformArn(
   client: ElasticBeanstalkClient,
@@ -87,19 +87,51 @@ export async function createEnvironment(
 async function createSharedALBEnv(
   client: ElasticBeanstalkClient,
   inputs: ActionInputs,
-  prodEnv: EnvironmentDescription | undefined,
-  applicationVersion?: ApplicationVersionDescription
-) {}
-
-async function createSwapCNAMEsEnv(
-  client: ElasticBeanstalkClient,
-  inputs: ActionInputs,
-  prodEnv: EnvironmentDescription | undefined,
+  prodEnv?: EnvironmentDescription,
   applicationVersion?: ApplicationVersionDescription
 ) {
+  const { LoadBalancerArn } = await createLoadBalancer(inputs);
+  const defaultOptionSettings = [
+    {
+      Namespace: "aws:ec2:instances",
+      OptionName: "InstanceTypes",
+      Value: "t3.micro,t2.micro",
+    },
+    {
+      Namespace: "aws:elasticbeanstalk:environment",
+      OptionName: "EnvironmentType",
+      Value: "LoadBalanced",
+    },
+    {
+      Namespace: "aws:elasticbeanstalk:environment",
+      OptionName: "LoadBalancerType",
+      Value: "application",
+    },
+    {
+      Namespace: "aws:elasticbeanstalk:environment",
+      OptionName: "LoadBalancerIsShared",
+      Value: "true",
+    },
+    {
+      Namespace: "aws:elbv2:loadbalancer",
+      OptionName: "SharedLoadBalancer",
+      Value: LoadBalancerArn,
+    },
+    {
+      Namespace: "aws:elasticbeanstalk:environment",
+      OptionName: "ServiceRole",
+      Value: "service-role/aws-elasticbeanstalk-service-role",
+    },
+    {
+      Namespace: "aws:autoscaling:launchconfiguration",
+      OptionName: "IamInstanceProfile",
+      Value: "aws-elasticbeanstalk-ec2-role",
+    },
+  ];
+
   return await client.send(
     new CreateEnvironmentCommand({
-      ApplicationName: applicationVersion.ApplicationName,
+      ApplicationName: inputs.appName,
       TemplateName: inputs.templateName,
       EnvironmentName:
         prodEnv?.EnvironmentName === inputs.blueEnv
@@ -107,7 +139,56 @@ async function createSwapCNAMEsEnv(
           : inputs.blueEnv,
       CNAMEPrefix: prodEnv ? inputs.stagingCNAME : inputs.productionCNAME,
       PlatformArn: await getPlatformArn(client, inputs.platformBranchName),
-      OptionSettings: inputs.templateName ? undefined : defaultOptionSettings,
+      OptionSettings: inputs.useDefaultOptionSettings
+        ? defaultOptionSettings
+        : undefined,
+      VersionLabel: applicationVersion?.VersionLabel,
+    })
+  );
+}
+
+async function createSwapCNAMEsEnv(
+  client: ElasticBeanstalkClient,
+  inputs: ActionInputs,
+  prodEnv?: EnvironmentDescription,
+  applicationVersion?: ApplicationVersionDescription
+) {
+  const defaultOptionSettings = [
+    {
+      Namespace: "aws:ec2:instances",
+      OptionName: "InstanceTypes",
+      Value: "t3.micro,t2.micro",
+    },
+    {
+      Namespace: "aws:elasticbeanstalk:environment",
+      OptionName: "EnvironmentType",
+      Value: "SingleInstance",
+    },
+    {
+      Namespace: "aws:elasticbeanstalk:environment",
+      OptionName: "ServiceRole",
+      Value: "service-role/aws-elasticbeanstalk-service-role",
+    },
+    {
+      Namespace: "aws:autoscaling:launchconfiguration",
+      OptionName: "IamInstanceProfile",
+      Value: "aws-elasticbeanstalk-ec2-role",
+    },
+  ];
+
+  return await client.send(
+    new CreateEnvironmentCommand({
+      ApplicationName: inputs.appName,
+      TemplateName: inputs.templateName,
+      EnvironmentName:
+        prodEnv?.EnvironmentName === inputs.blueEnv
+          ? inputs.greenEnv
+          : inputs.blueEnv,
+      CNAMEPrefix: prodEnv ? inputs.stagingCNAME : inputs.productionCNAME,
+      PlatformArn: await getPlatformArn(client, inputs.platformBranchName),
+      OptionSettings: inputs.useDefaultOptionSettings
+        ? defaultOptionSettings
+        : undefined,
       VersionLabel: applicationVersion?.VersionLabel,
     })
   );

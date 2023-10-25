@@ -21,7 +21,12 @@ export async function getEnvironments(
     })
   );
 
-  const res = { prodEnv: undefined, stagingEnv: undefined };
+  if (Environments.length === 0) {
+    return {
+      prodEnv: undefined,
+      stagingEnv: undefined,
+    };
+  }
 
   switch (inputs.strategy) {
     case DeploymentStrategy.SharedALB:
@@ -37,46 +42,44 @@ export async function getEnvironments(
             .then((res) => res.EnvironmentResources.LoadBalancers[0]?.Name);
         })
       );
-      console.log(Environments);
-      console.log(loadBalancers);
-      if (loadBalancers.find((arn) => /:loadbalancer\/[^app]/.test(arn))) {
-        throw new Error("Only Application Load Balancers are supported");
-      }
-      if (loadBalancers.find((arn) => /:loadbalancer\/app\/awseb/.test(arn))) {
-        throw new Error(
-          "Dedicated Load Balancers created by Elastic Beanstalk are not supported"
-        );
+
+      for (const arn of loadBalancers) {
+        if (!arn) {
+          throw new Error(
+            "All environments must be associated a with a load balancer"
+          );
+        }
+        if (/:loadbalancer\/[^app]/.test(arn)) {
+          throw new Error("Only Application Load Balancers are supported");
+        }
+        if (/:loadbalancer\/app\/awseb/.test(arn)) {
+          throw new Error(
+            "Dedicated load balancers created by Elastic Beanstalk are not supported"
+          );
+        }
       }
 
-      const uniqueLoadBalancers = new Set(loadBalancers);
-      if (uniqueLoadBalancers.size > 1) {
-        throw new Error(
-          "All environments must share the same Application Load Balancer"
-        );
-      }
-
-      if (uniqueLoadBalancers.size === 0) {
-        // create alb
+      const numLoadBalancers = new Set(loadBalancers).size;
+      if (numLoadBalancers !== 1) {
+        throw new Error("All environments must share the same load balancer");
       }
 
       // get the tags for the default target group, which will have the id of the prodEnv
       throw new Error("SharedALB is not yet supported");
-      const prodId = "e-n2rmjanmdh";
-      res.prodEnv = Environments.find((env) => env.EnvironmentId === prodId);
-      res.stagingEnv = Environments.find(
-        (env) => env.EnvironmentName !== res.prodEnv.EnvironmentName
-      );
+      // res.prodEnv = Environments.find((env) => env.EnvironmentId === prodId);
+      // res.stagingEnv = Environments.find(
+      //   (env) => env.EnvironmentName !== res.prodEnv.EnvironmentName
+      // );
       break;
 
     case DeploymentStrategy.SwapCNAMEs:
       const prodDomain = `${inputs.productionCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`;
-      res.prodEnv = Environments.find((env) => env.CNAME === prodDomain);
-      res.stagingEnv = Environments.find((env) => env.CNAME !== prodDomain);
-      break;
+      return {
+        prodEnv: Environments.find((env) => env.CNAME === prodDomain),
+        stagingEnv: Environments.find((env) => env.CNAME !== prodDomain),
+      };
 
     default:
       throw new Error(`Unknown strategy: ${inputs.strategy}`);
   }
-
-  return res;
 }
