@@ -63,6 +63,10 @@ inputs:
     description: "Whether to wait for an environment to update or terminate. If set to false, the action will exit with a non-error code during deployment, or exit with an error code when the environment is terminating or otherwise not ready."
     required: true
     default: true
+  use_default_option_settings:
+    description: "Whether to use default option settings when creating a new environment."
+    required: true
+    default: true
 outputs:
   target_env:
     description: "Name of the target environment, to which the new application version should be deployed"

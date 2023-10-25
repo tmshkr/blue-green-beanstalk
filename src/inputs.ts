@@ -26,6 +26,12 @@ export function getInputs() {
     waitForEnvironment: core.getBooleanInput("wait_for_environment", {
       required: true,
     }),
+    useDefaultOptionSettings: core.getBooleanInput(
+      "use_default_option_settings",
+      {
+        required: true,
+      }
+    ),
   };
 
   try {
