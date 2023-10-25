@@ -33,7 +33,7 @@ export async function getTargetEnv(
         { EnvironmentIds: [targetEnv.EnvironmentId] }
       );
       clearInterval(interval);
-      return getTargetEnv(client, inputs);
+      return null;
     } else
       throw new Error(
         "Target environment is terminating and wait_for_environment is set to false."
@@ -70,7 +70,7 @@ export async function getTargetEnv(
         targetEnv.EnvironmentId,
         targetEnv.EnvironmentName
       );
-      return getTargetEnv(client, inputs);
+      return null;
 
     case "Red":
       console.log("Target environment's health is Red.");
@@ -80,7 +80,7 @@ export async function getTargetEnv(
         targetEnv.EnvironmentId,
         targetEnv.EnvironmentName
       );
-      return getTargetEnv(client, inputs);
+      return null;
 
     case "Grey":
       console.log("Target environment's health is Grey.");
@@ -90,7 +90,7 @@ export async function getTargetEnv(
         targetEnv.EnvironmentId,
         targetEnv.EnvironmentName
       );
-      return getTargetEnv(client, inputs);
+      return null;
 
     default:
       throw new Error("Target environment is unknown.");
