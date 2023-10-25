@@ -1,4 +1,5 @@
 import * as core from "@actions/core";
+export type ActionInputs = ReturnType<typeof getInputs>;
 
 export function getInputs() {
   const inputs = {
@@ -12,7 +13,8 @@ export function getInputs() {
     platformBranchName: core.getInput("platform_branch_name", {
       required: true,
     }),
-    productionCNAME: core.getInput("production_cname", { required: true }),
+    productionCNAME:
+      core.getInput("production_cname", { required: false }) || undefined,
     promote: core.getBooleanInput("promote", { required: true }),
     sourceBundle:
       core.getInput("source_bundle", { required: false }) || undefined,
@@ -45,6 +47,10 @@ enum DeploymentStrategy {
 }
 
 function checkInputs(inputs: ActionInputs) {
+  if (!inputs.awsRegion) {
+    throw new Error("aws_region must be provided");
+  }
+
   if (inputs.blueEnv === inputs.greenEnv) {
     throw new Error("blue_env and green_env must be different");
   }
@@ -58,6 +64,11 @@ function checkInputs(inputs: ActionInputs) {
   }
 
   if (inputs.strategy === DeploymentStrategy.SwapCNAMEs) {
+    if (!inputs.productionCNAME) {
+      throw new Error(
+        "production_cname is required when using the swap_cnames strategy"
+      );
+    }
     if (inputs.productionCNAME === inputs.stagingCNAME) {
       throw new Error("production_cname and staging_cname must be different");
     }
@@ -67,8 +78,6 @@ function checkInputs(inputs: ActionInputs) {
     );
   }
 }
-
-export type ActionInputs = ReturnType<typeof getInputs>;
 
 export function getCredentials() {
   const credentials = {
