@@ -137,7 +137,6 @@ async function createSharedALBEnv(
         prodEnv?.EnvironmentName === inputs.blueEnv
           ? inputs.greenEnv
           : inputs.blueEnv,
-      CNAMEPrefix: prodEnv ? inputs.stagingCNAME : inputs.productionCNAME,
       PlatformArn: await getPlatformArn(client, inputs.platformBranchName),
       OptionSettings: inputs.useDefaultOptionSettings
         ? defaultOptionSettings
