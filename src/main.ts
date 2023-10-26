@@ -2,6 +2,7 @@ import {
   ElasticBeanstalkClient,
   EnvironmentDescription,
   DescribeEnvironmentsCommand,
+  ApplicationDescription,
 } from "@aws-sdk/client-elastic-beanstalk";
 import * as core from "@actions/core";
 
@@ -11,6 +12,7 @@ import { createEnvironment } from "./createEnvironment";
 import { deploy } from "./deploy";
 import { swapCNAMES } from "./swapCNAMES";
 import { ActionInputs, DeploymentStrategy, getCredentials } from "./inputs";
+import { updateListener } from "./updateListener";
 
 export async function main(inputs: ActionInputs) {
   try {
@@ -22,7 +24,7 @@ export async function main(inputs: ActionInputs) {
     const applicationVersion = await getApplicationVersion(client, inputs);
     let targetEnv = await getTargetEnv(client, inputs);
 
-    targetEnv = await handleDeploymentStrategy(
+    targetEnv = await handleDeployment(
       client,
       inputs,
       targetEnv,
@@ -36,11 +38,11 @@ export async function main(inputs: ActionInputs) {
   }
 }
 
-async function handleDeploymentStrategy(
-  client,
-  inputs,
-  targetEnv,
-  applicationVersion
+async function handleDeployment(
+  client: ElasticBeanstalkClient,
+  inputs: ActionInputs,
+  targetEnv: EnvironmentDescription | null,
+  applicationVersion: ApplicationDescription | null
 ) {
   if (!inputs.deploy) {
     return targetEnv;
@@ -59,7 +61,7 @@ async function handleDeploymentStrategy(
   if (inputs.promote) {
     switch (inputs.strategy) {
       case DeploymentStrategy.SharedALB:
-        // updateListenerRule(client, inputs, targetEnv);
+        await updateListener(client, inputs, targetEnv);
         break;
       case DeploymentStrategy.SwapCNAMEs:
         await swapCNAMES(client, inputs);
