@@ -91,22 +91,18 @@ async function createSharedALBEnv(
   prodEnv?: EnvironmentDescription,
   applicationVersion?: ApplicationVersionDescription
 ) {
-  let albARN;
-  if (prodEnv) {
-    albARN = await client
-      .send(
-        new DescribeEnvironmentResourcesCommand({
-          EnvironmentId: prodEnv.EnvironmentId,
-        })
-      )
-      .then(
-        ({ EnvironmentResources }) => EnvironmentResources.LoadBalancers[0].Name
-      );
-  } else {
-    albARN = await createLoadBalancer(inputs).then(
-      (alb) => alb.LoadBalancerArn
-    );
-  }
+  const albARN = prodEnv
+    ? await client
+        .send(
+          new DescribeEnvironmentResourcesCommand({
+            EnvironmentId: prodEnv.EnvironmentId,
+          })
+        )
+        .then(
+          ({ EnvironmentResources }) =>
+            EnvironmentResources.LoadBalancers[0].Name
+        )
+    : await createLoadBalancer(inputs).then((alb) => alb.LoadBalancerArn);
 
   const defaultOptionSettings = [
     {
