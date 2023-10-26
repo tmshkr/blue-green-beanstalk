@@ -1,85 +1,57 @@
 import {
-  ElasticBeanstalkClient,
   EnvironmentDescription,
   DescribeEnvironmentsCommand,
-  ApplicationDescription,
 } from "@aws-sdk/client-elastic-beanstalk";
 import * as core from "@actions/core";
 
+import { ebClient } from "./clients";
 import { getApplicationVersion } from "./getApplicationVersion";
 import { getTargetEnv } from "./getTargetEnv";
 import { createEnvironment } from "./createEnvironment";
 import { deploy } from "./deploy";
 import { swapCNAMES } from "./swapCNAMES";
-import { ActionInputs, DeploymentStrategy, getCredentials } from "./inputs";
+import { ActionInputs, DeploymentStrategy } from "./inputs";
 import { updateListener } from "./updateListener";
 
 export async function main(inputs: ActionInputs) {
   try {
-    const client = new ElasticBeanstalkClient({
-      region: inputs.awsRegion,
-      credentials: getCredentials(),
-    });
+    const applicationVersion = await getApplicationVersion(inputs);
+    let targetEnv = await getTargetEnv(inputs);
 
-    const applicationVersion = await getApplicationVersion(client, inputs);
-    let targetEnv = await getTargetEnv(client, inputs);
+    if (inputs.deploy) {
+      if (targetEnv) {
+        await deploy(inputs, targetEnv, applicationVersion);
+      } else {
+        targetEnv = await createEnvironment(inputs, applicationVersion);
+      }
+    }
 
-    targetEnv = await handleDeployment(
-      client,
-      inputs,
-      targetEnv,
-      applicationVersion
-    );
+    if (inputs.promote) {
+      if (!targetEnv) {
+        throw new Error("No target environment to promote");
+      }
+      switch (inputs.strategy) {
+        case DeploymentStrategy.SharedALB:
+          await updateListener(targetEnv);
+          break;
+        case DeploymentStrategy.SwapCNAMEs:
+          await swapCNAMES(inputs);
+          break;
+        default:
+          throw new Error(`Unknown strategy: ${inputs.strategy}`);
+      }
+    }
 
-    await setOutputs(client, targetEnv);
+    await setOutputs(targetEnv);
   } catch (err) {
     core.setFailed(err.message);
     return Promise.reject(err);
   }
 }
 
-async function handleDeployment(
-  client: ElasticBeanstalkClient,
-  inputs: ActionInputs,
-  targetEnv: EnvironmentDescription | null,
-  applicationVersion: ApplicationDescription | null
-) {
-  if (!inputs.deploy) {
-    return targetEnv;
-  }
-
+async function setOutputs(targetEnv: EnvironmentDescription) {
   if (targetEnv) {
-    await deploy(client, inputs, targetEnv, applicationVersion);
-  } else {
-    targetEnv = await createEnvironment(client, inputs, applicationVersion);
-  }
-
-  if (!inputs.waitForEnvironment) {
-    return targetEnv;
-  }
-
-  if (inputs.promote) {
-    switch (inputs.strategy) {
-      case DeploymentStrategy.SharedALB:
-        await updateListener(targetEnv);
-        break;
-      case DeploymentStrategy.SwapCNAMEs:
-        await swapCNAMES(client, inputs);
-        break;
-      default:
-        throw new Error(`Unknown strategy: ${inputs.strategy}`);
-    }
-  }
-
-  return targetEnv;
-}
-
-async function setOutputs(
-  client: ElasticBeanstalkClient,
-  targetEnv: EnvironmentDescription
-) {
-  if (targetEnv) {
-    targetEnv = await client
+    targetEnv = await ebClient
       .send(
         new DescribeEnvironmentsCommand({
           EnvironmentIds: [targetEnv.EnvironmentId],

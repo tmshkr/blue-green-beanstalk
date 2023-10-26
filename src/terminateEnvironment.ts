@@ -1,13 +1,12 @@
 import {
-  ElasticBeanstalkClient,
   TerminateEnvironmentCommand,
   waitUntilEnvironmentTerminated,
 } from "@aws-sdk/client-elastic-beanstalk";
+import { ebClient } from "./clients";
 import { setDescribeEventsInterval } from "./setDescribeEventsInterval";
 import { ActionInputs } from "./inputs";
 
 export async function terminateEnvironment(
-  client: ElasticBeanstalkClient,
   inputs: ActionInputs,
   environmentId: string,
   environmentName: string
@@ -20,20 +19,16 @@ export async function terminateEnvironment(
 
   console.log(`Terminating environment ${environmentId} ${environmentName}...`);
   const startTime = new Date();
-  await client.send(
+  await ebClient.send(
     new TerminateEnvironmentCommand({
       EnvironmentId: environmentId,
     })
   );
 
   if (inputs.waitForEnvironment) {
-    const interval = setDescribeEventsInterval(
-      client,
-      environmentId,
-      startTime
-    );
+    const interval = setDescribeEventsInterval(environmentId, startTime);
     await waitUntilEnvironmentTerminated(
-      { client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
+      { client: ebClient, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
       { EnvironmentIds: [environmentId] }
     );
     clearInterval(interval);

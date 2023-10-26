@@ -3,7 +3,22 @@ import { ElasticBeanstalkClient } from "@aws-sdk/client-elastic-beanstalk";
 import { EC2Client } from "@aws-sdk/client-ec2";
 import { ElasticLoadBalancingV2Client } from "@aws-sdk/client-elastic-load-balancing-v2";
 import { S3Client } from "@aws-sdk/client-s3";
-import { getCredentials } from "./inputs";
+
+function getCredentials() {
+  const credentials = {
+    accessKeyId:
+      process.env.INPUT_AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey:
+      process.env.INPUT_AWS_SECRET_ACCESS_KEY ||
+      process.env.AWS_SECRET_ACCESS_KEY,
+    sessionToken:
+      process.env.INPUT_AWS_SESSION_TOKEN || process.env.AWS_SESSION_TOKEN,
+  };
+  return (credentials.accessKeyId && credentials.secretAccessKey) ||
+    credentials.sessionToken
+    ? credentials
+    : undefined;
+}
 
 const awsConfig = {
   credentials: getCredentials(),

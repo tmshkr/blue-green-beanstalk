@@ -1,19 +1,18 @@
 import {
   waitUntilEnvironmentExists,
   waitUntilEnvironmentTerminated,
-  ElasticBeanstalkClient,
   EnvironmentDescription,
 } from "@aws-sdk/client-elastic-beanstalk";
+import { ebClient } from "./clients";
 import { ActionInputs } from "./inputs";
 import { getEnvironments } from "./getEnvironments";
 import { terminateEnvironment } from "./terminateEnvironment";
 import { setDescribeEventsInterval } from "./setDescribeEventsInterval";
 
 export async function getTargetEnv(
-  client: ElasticBeanstalkClient,
   inputs: ActionInputs
 ): Promise<EnvironmentDescription | null> {
-  const { prodEnv, stagingEnv } = await getEnvironments(client, inputs);
+  const { prodEnv, stagingEnv } = await getEnvironments(inputs);
   const targetEnv = prodEnv ? stagingEnv : undefined;
 
   if (!targetEnv) {
@@ -24,12 +23,9 @@ export async function getTargetEnv(
   if (targetEnv.Status === "Terminating") {
     if (inputs.waitForEnvironment) {
       console.log("Target environment is terminating. Waiting...");
-      const interval = setDescribeEventsInterval(
-        client,
-        targetEnv.EnvironmentId
-      );
+      const interval = setDescribeEventsInterval(targetEnv.EnvironmentId);
       await waitUntilEnvironmentTerminated(
-        { client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
+        { client: ebClient, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
         { EnvironmentIds: [targetEnv.EnvironmentId] }
       );
       clearInterval(interval);
@@ -41,16 +37,13 @@ export async function getTargetEnv(
   } else if (targetEnv.Status !== "Ready") {
     if (inputs.waitForEnvironment) {
       console.log("Target environment is not ready. Waiting...");
-      const interval = setDescribeEventsInterval(
-        client,
-        targetEnv.EnvironmentId
-      );
+      const interval = setDescribeEventsInterval(targetEnv.EnvironmentId);
       await waitUntilEnvironmentExists(
-        { client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
+        { client: ebClient, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
         { EnvironmentIds: [targetEnv.EnvironmentId] }
       );
       clearInterval(interval);
-      return getTargetEnv(client, inputs);
+      return getTargetEnv(inputs);
     } else
       throw new Error(
         "Target environment is not ready and wait_for_environment is set to false."
@@ -65,7 +58,6 @@ export async function getTargetEnv(
     case "Yellow":
       console.log("Target environment's health is Yellow.");
       await terminateEnvironment(
-        client,
         inputs,
         targetEnv.EnvironmentId,
         targetEnv.EnvironmentName
@@ -75,7 +67,6 @@ export async function getTargetEnv(
     case "Red":
       console.log("Target environment's health is Red.");
       await terminateEnvironment(
-        client,
         inputs,
         targetEnv.EnvironmentId,
         targetEnv.EnvironmentName
@@ -85,7 +76,6 @@ export async function getTargetEnv(
     case "Grey":
       console.log("Target environment's health is Grey.");
       await terminateEnvironment(
-        client,
         inputs,
         targetEnv.EnvironmentId,
         targetEnv.EnvironmentName

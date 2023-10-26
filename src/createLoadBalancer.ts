@@ -1,22 +1,13 @@
-import { EC2Client, DescribeSubnetsCommand } from "@aws-sdk/client-ec2";
+import { DescribeSubnetsCommand } from "@aws-sdk/client-ec2";
 import {
-  ElasticLoadBalancingV2Client,
   CreateLoadBalancerCommand,
   CreateListenerCommand,
   waitUntilLoadBalancerAvailable,
 } from "@aws-sdk/client-elastic-load-balancing-v2";
-import { ActionInputs, getCredentials } from "./inputs";
+import { elbClient, ec2Client } from "./clients";
+import { ActionInputs } from "./inputs";
 
 export async function createLoadBalancer(inputs: ActionInputs) {
-  const elbClient = new ElasticLoadBalancingV2Client({
-    credentials: getCredentials(),
-    region: inputs.awsRegion,
-  });
-  const ec2Client = new EC2Client({
-    credentials: getCredentials(),
-    region: inputs.awsRegion,
-  });
-
   const defaultSubnets = await ec2Client
     .send(
       new DescribeSubnetsCommand({

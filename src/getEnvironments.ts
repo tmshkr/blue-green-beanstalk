@@ -1,7 +1,6 @@
 import {
   DescribeEnvironmentResourcesCommand,
   DescribeEnvironmentsCommand,
-  ElasticBeanstalkClient,
   EnvironmentDescription,
 } from "@aws-sdk/client-elastic-beanstalk";
 import {
@@ -11,14 +10,11 @@ import {
 import { ActionInputs, DeploymentStrategy } from "./inputs";
 import { ebClient, elbClient } from "./clients";
 
-export async function getEnvironments(
-  client: ElasticBeanstalkClient,
-  inputs: ActionInputs
-): Promise<{
+export async function getEnvironments(inputs: ActionInputs): Promise<{
   prodEnv: EnvironmentDescription | undefined;
   stagingEnv: EnvironmentDescription | undefined;
 }> {
-  const { Environments } = await client.send(
+  const { Environments } = await ebClient.send(
     new DescribeEnvironmentsCommand({
       ApplicationName: inputs.appName,
       EnvironmentNames: [inputs.blueEnv, inputs.greenEnv],
@@ -35,13 +31,13 @@ export async function getEnvironments(
 
   switch (inputs.strategy) {
     case DeploymentStrategy.SharedALB:
-      const prodEnvName = await findSharedALBProdEnvName(inputs, Environments);
+      const prodEnvId = await findSharedALBProdEnvId(Environments);
       return {
         prodEnv: Environments.find(
-          ({ EnvironmentName }) => EnvironmentName === prodEnvName
+          ({ EnvironmentId }) => EnvironmentId === prodEnvId
         ),
         stagingEnv: Environments.find(
-          ({ EnvironmentName }) => EnvironmentName !== prodEnvName
+          ({ EnvironmentId }) => EnvironmentId !== prodEnvId
         ),
       };
 
@@ -57,10 +53,7 @@ export async function getEnvironments(
   }
 }
 
-async function findSharedALBProdEnvName(
-  inputs: ActionInputs,
-  environments: EnvironmentDescription[]
-) {
+async function findSharedALBProdEnvId(environments: EnvironmentDescription[]) {
   const resources = await Promise.all(
     environments.map((env) => {
       return ebClient
@@ -112,7 +105,7 @@ async function findSharedALBProdEnvName(
     throw new Error("No default target group found");
   }
 
-  const prodEnvName = await elbClient
+  const prodEnvId = await elbClient
     .send(
       new DescribeTagsCommand({
         ResourceArns: [prodTGArn],
@@ -121,16 +114,16 @@ async function findSharedALBProdEnvName(
     .then(({ TagDescriptions }) => {
       return TagDescriptions[0].Tags.find(
         ({ Key, Value }) =>
-          Key === "elasticbeanstalk:environment-name" &&
-          [inputs.blueEnv, inputs.greenEnv].includes(Value)
+          Key === "elasticbeanstalk:environment-id" &&
+          environments.map(({ EnvironmentId }) => EnvironmentId).includes(Value)
       ).Value;
     });
 
-  if (!prodEnvName) {
+  if (!prodEnvId) {
     throw new Error(
       "Neither the blue or green environment is associated with the default target group"
     );
   }
 
-  return prodEnvName;
+  return prodEnvId;
 }

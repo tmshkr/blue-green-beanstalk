@@ -2,22 +2,19 @@ import {
   ApplicationVersionDescription,
   CreateEnvironmentCommand,
   DescribeEnvironmentResourcesCommand,
-  ElasticBeanstalkClient,
   EnvironmentDescription,
   ListPlatformVersionsCommand,
   waitUntilEnvironmentExists,
 } from "@aws-sdk/client-elastic-beanstalk";
 
+import { ebClient } from "./clients";
 import { ActionInputs, DeploymentStrategy } from "./inputs";
 import { getEnvironments } from "./getEnvironments";
 import { setDescribeEventsInterval } from "./setDescribeEventsInterval";
 import { createLoadBalancer } from "./createLoadBalancer";
 
-async function getPlatformArn(
-  client: ElasticBeanstalkClient,
-  platformBranchName: string
-) {
-  const { PlatformSummaryList } = await client.send(
+async function getPlatformArn(platformBranchName: string) {
+  const { PlatformSummaryList } = await ebClient.send(
     new ListPlatformVersionsCommand({
       Filters: [
         {
@@ -33,31 +30,20 @@ async function getPlatformArn(
 }
 
 export async function createEnvironment(
-  client: ElasticBeanstalkClient,
   inputs: ActionInputs,
   applicationVersion?: ApplicationVersionDescription
 ) {
-  const { prodEnv } = await getEnvironments(client, inputs);
+  const { prodEnv } = await getEnvironments(inputs);
 
   const startTime = new Date();
   let newEnv;
 
   switch (inputs.strategy) {
     case DeploymentStrategy.SharedALB:
-      newEnv = await createSharedALBEnv(
-        client,
-        inputs,
-        prodEnv,
-        applicationVersion
-      );
+      newEnv = await createSharedALBEnv(inputs, prodEnv, applicationVersion);
       break;
     case DeploymentStrategy.SwapCNAMEs:
-      newEnv = await createSwapCNAMEsEnv(
-        client,
-        inputs,
-        prodEnv,
-        applicationVersion
-      );
+      newEnv = await createSwapCNAMEsEnv(inputs, prodEnv, applicationVersion);
       break;
 
     default:
@@ -72,13 +58,9 @@ export async function createEnvironment(
     return newEnv;
   }
 
-  const interval = setDescribeEventsInterval(
-    client,
-    newEnv.EnvironmentId,
-    startTime
-  );
+  const interval = setDescribeEventsInterval(newEnv.EnvironmentId, startTime);
   await waitUntilEnvironmentExists(
-    { client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
+    { client: ebClient, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
     { EnvironmentIds: [newEnv.EnvironmentId] }
   );
   clearInterval(interval);
@@ -86,13 +68,12 @@ export async function createEnvironment(
 }
 
 async function createSharedALBEnv(
-  client: ElasticBeanstalkClient,
   inputs: ActionInputs,
   prodEnv?: EnvironmentDescription,
   applicationVersion?: ApplicationVersionDescription
 ) {
   const albARN = prodEnv
-    ? await client
+    ? await ebClient
         .send(
           new DescribeEnvironmentResourcesCommand({
             EnvironmentId: prodEnv.EnvironmentId,
@@ -142,7 +123,7 @@ async function createSharedALBEnv(
     },
   ];
 
-  return await client.send(
+  return await ebClient.send(
     new CreateEnvironmentCommand({
       ApplicationName: inputs.appName,
       TemplateName: inputs.templateName,
@@ -150,7 +131,7 @@ async function createSharedALBEnv(
         prodEnv?.EnvironmentName === inputs.blueEnv
           ? inputs.greenEnv
           : inputs.blueEnv,
-      PlatformArn: await getPlatformArn(client, inputs.platformBranchName),
+      PlatformArn: await getPlatformArn(inputs.platformBranchName),
       OptionSettings: inputs.useDefaultOptionSettings
         ? defaultOptionSettings
         : undefined,
@@ -160,7 +141,6 @@ async function createSharedALBEnv(
 }
 
 async function createSwapCNAMEsEnv(
-  client: ElasticBeanstalkClient,
   inputs: ActionInputs,
   prodEnv?: EnvironmentDescription,
   applicationVersion?: ApplicationVersionDescription
@@ -188,7 +168,7 @@ async function createSwapCNAMEsEnv(
     },
   ];
 
-  return await client.send(
+  return await ebClient.send(
     new CreateEnvironmentCommand({
       ApplicationName: inputs.appName,
       TemplateName: inputs.templateName,
@@ -197,7 +177,7 @@ async function createSwapCNAMEsEnv(
           ? inputs.greenEnv
           : inputs.blueEnv,
       CNAMEPrefix: prodEnv ? inputs.stagingCNAME : inputs.productionCNAME,
-      PlatformArn: await getPlatformArn(client, inputs.platformBranchName),
+      PlatformArn: await getPlatformArn(inputs.platformBranchName),
       OptionSettings: inputs.useDefaultOptionSettings
         ? defaultOptionSettings
         : undefined,

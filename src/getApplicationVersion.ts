@@ -2,22 +2,15 @@ import {
   CreateApplicationVersionCommand,
   CreateStorageLocationCommand,
   DescribeApplicationVersionsCommand,
-  ElasticBeanstalkClient,
 } from "@aws-sdk/client-elastic-beanstalk";
-import {
-  S3Client,
-  PutObjectCommand,
-  HeadObjectCommand,
-} from "@aws-sdk/client-s3";
+import { PutObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 const fs = require("fs");
 
-import { ActionInputs, getCredentials } from "./inputs";
+import { ebClient, s3Client } from "./clients";
+import { ActionInputs } from "./inputs";
 
-export async function getApplicationVersion(
-  client: ElasticBeanstalkClient,
-  inputs: ActionInputs
-) {
-  const { ApplicationVersions } = await client.send(
+export async function getApplicationVersion(inputs: ActionInputs) {
+  const { ApplicationVersions } = await ebClient.send(
     new DescribeApplicationVersionsCommand({
       ApplicationName: inputs.appName,
       VersionLabels: [inputs.versionLabel],
@@ -29,19 +22,16 @@ export async function getApplicationVersion(
     return ApplicationVersions[0];
   }
 
-  const newVersion = await createApplicationVersion(client, inputs);
+  const newVersion = await createApplicationVersion(inputs);
   return newVersion;
 }
 
-async function createApplicationVersion(
-  client: ElasticBeanstalkClient,
-  inputs: ActionInputs
-) {
+async function createApplicationVersion(inputs: ActionInputs) {
   if (!inputs.versionLabel) return null;
   let SourceBundle;
 
   if (inputs.sourceBundle) {
-    const { S3Bucket } = await client.send(
+    const { S3Bucket } = await ebClient.send(
       new CreateStorageLocationCommand({})
     );
     const S3Key = `${inputs.appName}/${inputs.versionLabel.replace(
@@ -51,12 +41,7 @@ async function createApplicationVersion(
 
     SourceBundle = { S3Bucket, S3Key };
 
-    const s3 = new S3Client({
-      region: inputs.awsRegion,
-      credentials: getCredentials(),
-    });
-
-    const fileExists = await s3
+    const fileExists = await s3Client
       .send(
         new HeadObjectCommand({
           Bucket: S3Bucket,
@@ -73,7 +58,7 @@ async function createApplicationVersion(
 
     if (!fileExists) {
       console.log(`Uploading ${S3Key} to S3...`);
-      await s3.send(
+      await s3Client.send(
         new PutObjectCommand({
           Bucket: S3Bucket,
           Key: S3Key,
@@ -83,7 +68,7 @@ async function createApplicationVersion(
     }
   }
 
-  const { ApplicationVersion } = await client.send(
+  const { ApplicationVersion } = await ebClient.send(
     new CreateApplicationVersionCommand({
       ApplicationName: inputs.appName,
       AutoCreateApplication: true,
