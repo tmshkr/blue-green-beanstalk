@@ -1,6 +1,7 @@
 import {
   ApplicationVersionDescription,
   CreateEnvironmentCommand,
+  DescribeEnvironmentResourcesCommand,
   ElasticBeanstalkClient,
   EnvironmentDescription,
   ListPlatformVersionsCommand,
@@ -90,7 +91,23 @@ async function createSharedALBEnv(
   prodEnv?: EnvironmentDescription,
   applicationVersion?: ApplicationVersionDescription
 ) {
-  const { LoadBalancerArn } = await createLoadBalancer(inputs);
+  let albARN;
+  if (prodEnv) {
+    albARN = await client
+      .send(
+        new DescribeEnvironmentResourcesCommand({
+          EnvironmentId: prodEnv.EnvironmentId,
+        })
+      )
+      .then(
+        ({ EnvironmentResources }) => EnvironmentResources.LoadBalancers[0].Name
+      );
+  } else {
+    albARN = await createLoadBalancer(inputs).then(
+      (alb) => alb.LoadBalancerArn
+    );
+  }
+
   const defaultOptionSettings = [
     {
       Namespace: "aws:ec2:instances",
@@ -115,7 +132,7 @@ async function createSharedALBEnv(
     {
       Namespace: "aws:elbv2:loadbalancer",
       OptionName: "SharedLoadBalancer",
-      Value: LoadBalancerArn,
+      Value: albARN,
     },
     {
       Namespace: "aws:elasticbeanstalk:environment",
