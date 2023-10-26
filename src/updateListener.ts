@@ -1,31 +1,15 @@
-import {
-  AutoScalingClient,
-  DescribeAutoScalingGroupsCommand,
-} from "@aws-sdk/client-auto-scaling";
+import { DescribeAutoScalingGroupsCommand } from "@aws-sdk/client-auto-scaling";
 import {
   DescribeListenersCommand,
-  ElasticLoadBalancingV2Client,
   ModifyListenerCommand,
 } from "@aws-sdk/client-elastic-load-balancing-v2";
 import {
   DescribeEnvironmentResourcesCommand,
-  ElasticBeanstalkClient,
   EnvironmentDescription,
 } from "@aws-sdk/client-elastic-beanstalk";
-import { ActionInputs, getCredentials } from "./inputs";
+import { asClient, ebClient, elbClient } from "./clients";
 
-export async function updateListener(
-  ebClient: ElasticBeanstalkClient,
-  inputs: ActionInputs,
-  targetEnv: EnvironmentDescription
-) {
-  const config = {
-    credentials: getCredentials(),
-    region: inputs.awsRegion,
-  };
-  const asClient = new AutoScalingClient(config);
-  const elbClient = new ElasticLoadBalancingV2Client(config);
-
+export async function updateListener(targetEnv: EnvironmentDescription) {
   const { EnvironmentResources } = await ebClient.send(
     new DescribeEnvironmentResourcesCommand({
       EnvironmentId: targetEnv.EnvironmentId,

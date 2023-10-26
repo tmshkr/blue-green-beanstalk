@@ -61,7 +61,7 @@ async function handleDeployment(
   if (inputs.promote) {
     switch (inputs.strategy) {
       case DeploymentStrategy.SharedALB:
-        await updateListener(client, inputs, targetEnv);
+        await updateListener(targetEnv);
         break;
       case DeploymentStrategy.SwapCNAMEs:
         await swapCNAMES(client, inputs);
