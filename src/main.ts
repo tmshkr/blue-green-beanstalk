@@ -78,13 +78,15 @@ async function setOutputs(
   client: ElasticBeanstalkClient,
   targetEnv: EnvironmentDescription
 ) {
-  targetEnv = await client
-    .send(
-      new DescribeEnvironmentsCommand({
-        EnvironmentIds: [targetEnv.EnvironmentId],
-      })
-    )
-    .then(({ Environments }) => Environments[0]);
+  if (targetEnv) {
+    targetEnv = await client
+      .send(
+        new DescribeEnvironmentsCommand({
+          EnvironmentIds: [targetEnv.EnvironmentId],
+        })
+      )
+      .then(({ Environments }) => Environments[0]);
+  }
 
   core.setOutput("target_env_cname", targetEnv?.CNAME || "");
   core.setOutput("target_env_id", targetEnv?.EnvironmentId || "");
