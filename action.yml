@@ -33,7 +33,7 @@ inputs:
     description: "CNAME prefix for the domain that serves production traffic. Only required for the `swap_cnames` strategy."
     required: false
   promote:
-    description: "Whether to promote the target environment to production. When using the `swap_cnames` strategy, the action will swap the CNAMEs of the blue and green environments to redirect production traffic to the target environment. When using the `shared_alb` strategy, the action will update the shared Application Load Balancer's default rule to point to the target environment, replacing the other environment."
+    description: "Whether to promote the target environment to production. When using the `swap_cnames` strategy, the action will swap the CNAMEs of the blue and green environments to redirect production traffic to the target environment. When using the `shared_alb` strategy, the action will update the shared Application Load Balancer's default listener rule to point to the target environment, replacing the other environment."
     required: true
     default: true
   staging_cname:
@@ -47,7 +47,7 @@ inputs:
     required: true
     default: "swap_cnames"
   template_name:
-    description: "Name of an Elastic Beanstalk configuration template to use when creating a new environment. If no template is specified, default option settings will be used."
+    description: "Name of an Elastic Beanstalk configuration template to use when creating a new environment."
     required: false
   terminate_unhealthy_environment:
     description: "Whether to terminate an unhealthy target environment. If set to false, the action will exit with an error when the target environment is unhealthy."
@@ -55,12 +55,12 @@ inputs:
     default: true
   version_description:
     description: "Description to use for the new application version."
-    required: true
+    required: false
   version_label:
     description: "Version label to use for the new application version."
-    required: true
+    required: false
   wait_for_environment:
-    description: "Whether to wait for an environment to update or terminate. If set to false, the action will exit with a non-error code during deployment, or exit with an error code when the environment is terminating or otherwise not ready."
+    description: "Whether to wait for an environment to update or terminate. If set to false, the action will exit with a non-error code during deployment, or exit with an error when the environment is terminating or otherwise not ready."
     required: true
     default: true
   use_default_option_settings:
@@ -68,8 +68,18 @@ inputs:
     required: true
     default: true
 outputs:
-  target_env:
-    description: "Name of the target environment, to which the new application version should be deployed"
+  target_env_cname:
+    description: "CNAME of the target environment."
+  target_env_endpoint_url:
+    description: "URL of the environment's load balancer, or an Elastic IP address when using a single instance environment."
+  target_env_id:
+    description: "ID of the target environment."
+  target_env_json:
+    description: "JSON representation of the target environment."
+  target_env_name:
+    description: "Name of the target environment."
+  target_env_status:
+    description: "Status of the target environment."
 runs:
   using: "node20"
   main: "dist/index.js"
