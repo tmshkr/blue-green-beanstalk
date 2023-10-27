@@ -48,7 +48,7 @@ export enum DeploymentStrategy {
   SwapCNAMEs = "swap_cnames",
 }
 
-function checkInputs(inputs: ActionInputs) {
+export function checkInputs(inputs: ActionInputs) {
   if (!inputs.awsRegion) {
     throw new Error("aws_region must be provided");
   }

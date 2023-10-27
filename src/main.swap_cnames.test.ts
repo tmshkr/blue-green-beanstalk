@@ -11,56 +11,7 @@ const region = "us-west-2";
 const ebClient = new ElasticBeanstalkClient();
 jest.setTimeout(1000 * 60 * 10);
 
-describe("checkInputs", () => {
-  const key = randomBytes(3).toString("hex");
-  it("should reject with an error when blueEnv and greenEnv are the same", () => {
-    expect(
-      async () =>
-        await main({
-          appName: `test-app-${key}`,
-          awsRegion: region,
-          blueEnv: `same-${key}`,
-          deploy: true,
-          greenEnv: `same-${key}`,
-          platformBranchName: "Docker running on 64bit Amazon Linux 2023",
-          productionCNAME: `blue-green-test-${key}`,
-          sourceBundle: undefined,
-          stagingCNAME: `blue-green-test-staging-${key}`,
-          swapCNAMES: true,
-          templateName: undefined,
-          terminateUnhealthyEnvironment: true,
-          versionDescription: undefined,
-          versionLabel: `test-version-${key}`,
-          waitForEnvironment: true,
-        })
-    ).rejects.toThrow("blue_env and green_env must be different");
-  });
-
-  it("should reject with an error when productionCNAME and stagingCNAME are the same", () => {
-    expect(
-      async () =>
-        await main({
-          appName: `test-app-${key}`,
-          awsRegion: region,
-          blueEnv: `my-blue-env-${key}`,
-          deploy: true,
-          greenEnv: `my-green-env-${key}`,
-          platformBranchName: "Docker running on 64bit Amazon Linux 2023",
-          productionCNAME: `same-${key}`,
-          sourceBundle: undefined,
-          stagingCNAME: `same-${key}`,
-          swapCNAMES: true,
-          templateName: undefined,
-          terminateUnhealthyEnvironment: true,
-          versionDescription: undefined,
-          versionLabel: `test-version-${key}`,
-          waitForEnvironment: true,
-        })
-    ).rejects.toThrow("production_cname and staging_cname must be different");
-  });
-});
-
-describe("main", () => {
+describe("swap_cnames strategy", () => {
   const key = randomBytes(3).toString("hex");
   const inputs = {
     appName: `test-app-${key}`,
@@ -70,14 +21,16 @@ describe("main", () => {
     greenEnv: `my-green-env-${key}`,
     platformBranchName: "Docker running on 64bit Amazon Linux 2023",
     productionCNAME: `blue-green-test-prod-${key}`,
+    promote: true,
     sourceBundle: undefined,
     stagingCNAME: `blue-green-test-staging-${key}`,
-    swapCNAMES: true,
+    strategy: "swap_cnames",
     templateName: undefined,
     terminateUnhealthyEnvironment: true,
     versionDescription: undefined,
     versionLabel: `test-version-${key}`,
     waitForEnvironment: true,
+    useDefaultOptionSettings: true,
   };
   const prodDomain = `${inputs.productionCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`;
   const stagingDomain = `${inputs.stagingCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`;
