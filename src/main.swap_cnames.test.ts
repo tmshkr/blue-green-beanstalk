@@ -35,7 +35,7 @@ describe("swap_cnames strategy", () => {
   const prodDomain = `${inputs.productionCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`;
   const stagingDomain = `${inputs.stagingCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`;
 
-  describe("blue/green environments do not exist", () => {
+  describe("create the production environment", () => {
     it("should not have any environments", async () => {
       const { Environments } = await ebClient.send(
         new DescribeEnvironmentsCommand({
@@ -61,7 +61,7 @@ describe("swap_cnames strategy", () => {
     });
   });
 
-  describe("only production environment exists", () => {
+  describe("create the staging envionment", () => {
     it("should have one environment with the production domain", async () => {
       const { Environments } = await ebClient.send(
         new DescribeEnvironmentsCommand({
@@ -73,7 +73,7 @@ describe("swap_cnames strategy", () => {
       expect(Environments[0].CNAME).toEqual(prodDomain);
     });
 
-    it("should create a new staging EB environment and then swap the CNAMES", async () => {
+    it("should create a new environment and then swap the CNAMES", async () => {
       await main(inputs);
 
       const { Environments } = await ebClient.send(
@@ -95,7 +95,7 @@ describe("swap_cnames strategy", () => {
     });
   });
 
-  describe("setup staging environment unhealthy", () => {
+  describe("setup unhealthy environment", () => {
     it("should spin down the staging environment so that its health is Grey", async () => {
       const stagingEnv = await ebClient
         .send(
