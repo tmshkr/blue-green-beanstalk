@@ -57,13 +57,8 @@ function checkInputs(inputs: ActionInputs) {
     throw new Error("blue_env and green_env must be different");
   }
 
-  if (
-    (inputs.versionLabel && !inputs.sourceBundle) ||
-    (!inputs.versionLabel && inputs.sourceBundle)
-  ) {
-    throw new Error(
-      "version_label and source_bundle must be provided together"
-    );
+  if (!inputs.versionLabel && inputs.sourceBundle) {
+    throw new Error("source_bundle must be provided with a version_label");
   }
 
   if (
@@ -82,10 +77,10 @@ function checkInputs(inputs: ActionInputs) {
     }
     if (inputs.productionCNAME === inputs.stagingCNAME) {
       throw new Error("production_cname and staging_cname must be different");
+    } else if (inputs.productionCNAME || inputs.stagingCNAME) {
+      core.warning(
+        "production_cname and staging_cname are ignored when not using the swap_cnames strategy"
+      );
     }
-  } else if (inputs.productionCNAME || inputs.stagingCNAME) {
-    core.warning(
-      "production_cname and staging_cname are ignored when not using the swap_cnames strategy"
-    );
   }
 }
