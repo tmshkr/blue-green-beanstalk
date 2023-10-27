@@ -8,8 +8,12 @@ import {
   EnvironmentDescription,
 } from "@aws-sdk/client-elastic-beanstalk";
 import { asClient, ebClient, elbClient } from "./clients";
+import { ActionInputs } from "./inputs";
 
-export async function updateListener(targetEnv: EnvironmentDescription) {
+export async function updateListener(
+  inputs: ActionInputs,
+  targetEnv: EnvironmentDescription
+) {
   const { EnvironmentResources } = await ebClient.send(
     new DescribeEnvironmentResourcesCommand({
       EnvironmentId: targetEnv.EnvironmentId,
@@ -28,16 +32,20 @@ export async function updateListener(targetEnv: EnvironmentDescription) {
     })
   );
 
-  await elbClient.send(
-    new ModifyListenerCommand({
-      ListenerArn: Listeners.find(({ Port }) => Port === 80).ListenerArn,
-      DefaultActions: [
-        {
-          Type: "forward",
-          TargetGroupArn: AutoScalingGroups[0].TargetGroupARNs[0],
-        },
-      ],
-    })
+  await Promise.all(
+    inputs.ports.map((port) =>
+      elbClient.send(
+        new ModifyListenerCommand({
+          ListenerArn: Listeners.find(({ Port }) => Port === port).ListenerArn,
+          DefaultActions: [
+            {
+              Type: "forward",
+              TargetGroupArn: AutoScalingGroups[0].TargetGroupARNs[0],
+            },
+          ],
+        })
+      )
+    )
   );
 
   console.log("Updated ALB listener's default rule");

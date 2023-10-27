@@ -31,7 +31,7 @@ export async function getEnvironments(inputs: ActionInputs): Promise<{
 
   switch (inputs.strategy) {
     case DeploymentStrategy.SharedALB:
-      const prodEnvId = await findSharedALBProdEnvId(Environments);
+      const prodEnvId = await findSharedALBProdEnvId(inputs, Environments);
       return {
         prodEnv: Environments.find(
           ({ EnvironmentId }) => EnvironmentId === prodEnvId
@@ -53,7 +53,10 @@ export async function getEnvironments(inputs: ActionInputs): Promise<{
   }
 }
 
-async function findSharedALBProdEnvId(environments: EnvironmentDescription[]) {
+async function findSharedALBProdEnvId(
+  inputs: ActionInputs,
+  environments: EnvironmentDescription[]
+) {
   const resources = await Promise.all(
     environments.map((env) => {
       return ebClient
@@ -91,16 +94,25 @@ async function findSharedALBProdEnvId(environments: EnvironmentDescription[]) {
     throw new Error("All environments must share the same load balancer");
   }
 
-  // get the tags for the default target group, which will have the name of the prodEnv
-  const defaultListener = await elbClient
+  // get the tags for the default target group, which will have the id of the prodEnv
+  const listeners = await elbClient
     .send(
       new DescribeListenersCommand({
         LoadBalancerArn: loadBalancers[0],
       })
     )
-    .then(({ Listeners }) => Listeners.find(({ Port }) => Port === 80));
+    .then(({ Listeners }) =>
+      Listeners.filter(({ Port }) => inputs.ports.includes(Port))
+    );
 
-  const prodTGArn = defaultListener.DefaultActions[0].TargetGroupArn;
+  const prodTGArn = listeners.reduce((acc, { DefaultActions }) => {
+    const arn = DefaultActions[0].TargetGroupArn;
+    if (acc && acc !== arn) {
+      throw new Error("Each listener must point to the same target group");
+    }
+    return arn;
+  }, "");
+
   if (!prodTGArn) {
     throw new Error("No default target group found");
   }

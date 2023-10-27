@@ -11,6 +11,11 @@ export function getInputs() {
     platformBranchName: core.getInput("platform_branch_name", {
       required: true,
     }),
+    ports: core
+      .getInput("ports", { required: true })
+      .split(",")
+      .map((str) => Number(str))
+      .filter((num) => Boolean(num)),
     productionCNAME: core.getInput("production_cname") || undefined,
     promote: core.getBooleanInput("promote", { required: true }),
     sourceBundle: core.getInput("source_bundle") || undefined,
@@ -78,9 +83,16 @@ export function checkInputs(inputs: ActionInputs) {
     if (inputs.productionCNAME === inputs.stagingCNAME) {
       throw new Error("production_cname and staging_cname must be different");
     }
-  } else if (inputs.productionCNAME || inputs.stagingCNAME) {
-    core.warning(
-      "production_cname and staging_cname are ignored when not using the swap_cnames strategy"
-    );
+  }
+
+  if (inputs.strategy === DeploymentStrategy.SharedALB) {
+    if (inputs.productionCNAME || inputs.stagingCNAME) {
+      core.warning(
+        "production_cname and staging_cname are ignored when using the shared_alb strategy"
+      );
+    }
+    if (inputs.ports.length === 0) {
+      throw new Error("the shared_alb strategy requires a port to be provided");
+    }
   }
 }

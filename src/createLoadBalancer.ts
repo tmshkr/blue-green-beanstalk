@@ -34,21 +34,25 @@ export async function createLoadBalancer(inputs: ActionInputs) {
     )
     .then(({ LoadBalancers }) => LoadBalancers[0]);
 
-  await elbClient.send(
-    new CreateListenerCommand({
-      LoadBalancerArn: alb.LoadBalancerArn,
-      Protocol: "HTTP",
-      Port: 80,
-      DefaultActions: [
-        {
-          Type: "fixed-response",
-          FixedResponseConfig: {
-            StatusCode: "200",
-            ContentType: "text/plain",
-            MessageBody: "OK",
-          },
-        },
-      ],
+  await Promise.all(
+    inputs.ports.map((port) => {
+      elbClient.send(
+        new CreateListenerCommand({
+          LoadBalancerArn: alb.LoadBalancerArn,
+          Protocol: "HTTP",
+          Port: port,
+          DefaultActions: [
+            {
+              Type: "fixed-response",
+              FixedResponseConfig: {
+                StatusCode: "200",
+                ContentType: "text/plain",
+                MessageBody: "OK",
+              },
+            },
+          ],
+        })
+      );
     })
   );
 

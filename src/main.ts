@@ -32,7 +32,7 @@ export async function main(inputs: ActionInputs) {
       }
       switch (inputs.strategy) {
         case DeploymentStrategy.SharedALB:
-          await updateListener(targetEnv);
+          await updateListener(inputs, targetEnv);
           break;
         case DeploymentStrategy.SwapCNAMEs:
           await swapCNAMES(inputs);
