@@ -77,10 +77,10 @@ function checkInputs(inputs: ActionInputs) {
     }
     if (inputs.productionCNAME === inputs.stagingCNAME) {
       throw new Error("production_cname and staging_cname must be different");
-    } else if (inputs.productionCNAME || inputs.stagingCNAME) {
-      core.warning(
-        "production_cname and staging_cname are ignored when not using the swap_cnames strategy"
-      );
     }
+  } else if (inputs.productionCNAME || inputs.stagingCNAME) {
+    core.warning(
+      "production_cname and staging_cname are ignored when not using the swap_cnames strategy"
+    );
   }
 }
