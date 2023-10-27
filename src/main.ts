@@ -61,9 +61,9 @@ async function setOutputs(targetEnv: EnvironmentDescription) {
   }
 
   core.setOutput("target_env_cname", targetEnv?.CNAME || "");
+  core.setOutput("target_env_endpoint_url", targetEnv?.EndpointURL || "");
   core.setOutput("target_env_id", targetEnv?.EnvironmentId || "");
   core.setOutput("target_env_json", JSON.stringify(targetEnv) || "");
-  core.setOutput("target_env_endpoint_url", targetEnv?.EndpointURL || "");
   core.setOutput("target_env_name", targetEnv?.EnvironmentName || "");
   core.setOutput("target_env_status", targetEnv?.Status || "");
 }
