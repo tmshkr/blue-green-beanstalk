@@ -2,6 +2,7 @@ import { DescribeAutoScalingGroupsCommand } from "@aws-sdk/client-auto-scaling";
 import {
   DescribeListenersCommand,
   ModifyListenerCommand,
+  DescribeTargetGroupsCommand,
 } from "@aws-sdk/client-elastic-load-balancing-v2";
 import {
   DescribeEnvironmentResourcesCommand,
@@ -19,12 +20,37 @@ export async function updateListener(
       EnvironmentId: targetEnv.EnvironmentId,
     })
   );
+  const { TargetGroupARNs } = await asClient
+    .send(
+      new DescribeAutoScalingGroupsCommand({
+        AutoScalingGroupNames: [EnvironmentResources.AutoScalingGroups[0].Name],
+      })
+    )
+    .then(({ AutoScalingGroups }) => AutoScalingGroups[0]);
 
-  const { AutoScalingGroups } = await asClient.send(
-    new DescribeAutoScalingGroupsCommand({
-      AutoScalingGroupNames: [EnvironmentResources.AutoScalingGroups[0].Name],
-    })
-  );
+  if (TargetGroupARNs.length === 0) {
+    throw new Error("No target groups found in AutoScalingGroup");
+  } else if (TargetGroupARNs.length === 1) {
+    var targetGroupArn = TargetGroupARNs[0];
+  } else {
+    var mapPortToTargetGroup: {
+      [x: number]: string;
+    } = await elbClient
+      .send(
+        new DescribeTargetGroupsCommand({
+          TargetGroupArns: TargetGroupARNs,
+        })
+      )
+      .then(({ TargetGroups }) => {
+        const map = {};
+        for (const { Port, TargetGroupArn } of TargetGroups) {
+          if (inputs.ports.includes(Port)) {
+            map[Port] = TargetGroupArn;
+          }
+        }
+        return map;
+      });
+  }
 
   const { Listeners } = await elbClient.send(
     new DescribeListenersCommand({
@@ -40,7 +66,7 @@ export async function updateListener(
           DefaultActions: [
             {
               Type: "forward",
-              TargetGroupArn: AutoScalingGroups[0].TargetGroupARNs[0],
+              TargetGroupArn: targetGroupArn || mapPortToTargetGroup[port],
             },
           ],
         })

@@ -9,6 +9,7 @@ import {
 } from "@aws-sdk/client-elastic-load-balancing-v2";
 import { ActionInputs, DeploymentStrategy } from "./inputs";
 import { ebClient, elbClient } from "./clients";
+import * as core from "@actions/core";
 
 export async function getEnvironments(inputs: ActionInputs): Promise<{
   prodEnv: EnvironmentDescription | undefined;
@@ -105,30 +106,34 @@ async function findSharedALBProdEnvId(
       Listeners.filter(({ Port }) => inputs.ports.includes(Port))
     );
 
-  const prodTGArn = listeners.reduce((acc, { DefaultActions }) => {
-    const arn = DefaultActions[0].TargetGroupArn;
-    if (acc && acc !== arn) {
-      throw new Error("Each listener must point to the same target group");
-    }
-    return arn;
-  }, "");
+  const tgARNs = listeners.map(
+    ({ DefaultActions }) => DefaultActions[0].TargetGroupArn
+  );
 
-  if (!prodTGArn) {
+  if (!tgARNs.length) {
     throw new Error("No default target group found");
   }
 
   const prodEnvId = await elbClient
     .send(
       new DescribeTagsCommand({
-        ResourceArns: [prodTGArn],
+        ResourceArns: tgARNs,
       })
     )
     .then(({ TagDescriptions }) => {
-      return TagDescriptions[0].Tags.find(
-        ({ Key, Value }) =>
-          Key === "elasticbeanstalk:environment-id" &&
-          environments.map(({ EnvironmentId }) => EnvironmentId).includes(Value)
-      ).Value;
+      const ids = [];
+      for (const { Tags } of TagDescriptions) {
+        const id = Tags.find(
+          ({ Key }) => Key === "elasticbeanstalk:environment-id"
+        )?.Value;
+        if (id) ids.push(id);
+      }
+      if (new Set(ids).size !== 1) {
+        core.warning(
+          "Multiple environments are associated with the default listener rule"
+        );
+      }
+      return ids[0];
     });
 
   if (!prodEnvId) {
