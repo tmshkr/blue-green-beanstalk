@@ -96,19 +96,17 @@ async function findSharedALBProdEnvId(
   }
 
   // get the tags for the default target group, which will have the id of the prodEnv
-  const listeners = await elbClient
+  const tgARNs = await elbClient
     .send(
       new DescribeListenersCommand({
         LoadBalancerArn: loadBalancers[0],
       })
     )
     .then(({ Listeners }) =>
-      Listeners.filter(({ Port }) => inputs.ports.includes(Port))
+      Listeners.filter(({ Port }) => inputs.ports.includes(Port)).map(
+        ({ DefaultActions }) => DefaultActions[0].TargetGroupArn
+      )
     );
-
-  const tgARNs = listeners.map(
-    ({ DefaultActions }) => DefaultActions[0].TargetGroupArn
-  );
 
   if (!tgARNs.length) {
     throw new Error("No default target group found");
@@ -123,14 +121,15 @@ async function findSharedALBProdEnvId(
     .then(({ TagDescriptions }) => {
       const ids = [];
       for (const { Tags } of TagDescriptions) {
-        const id = Tags.find(
-          ({ Key }) => Key === "elasticbeanstalk:environment-id"
-        )?.Value;
-        if (id) ids.push(id);
+        for (const { Key, Value } of Tags) {
+          if (Key === "elasticbeanstalk:environment-id") {
+            ids.push(Value);
+          }
+        }
       }
-      if (new Set(ids).size !== 1) {
-        core.warning(
-          "Multiple environments are associated with the default listener rule"
+      if (new Set(ids).size > 1) {
+        throw new Error(
+          "Multiple environments are associated with a listener rule"
         );
       }
       return ids[0];
