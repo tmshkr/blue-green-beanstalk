@@ -9,7 +9,6 @@ import {
 } from "@aws-sdk/client-elastic-load-balancing-v2";
 import { ActionInputs, DeploymentStrategy } from "./inputs";
 import { ebClient, elbClient } from "./clients";
-import * as core from "@actions/core";
 
 export async function getEnvironments(inputs: ActionInputs): Promise<{
   prodEnv: EnvironmentDescription | undefined;
@@ -103,9 +102,12 @@ async function findSharedALBProdEnvId(
       })
     )
     .then(({ Listeners }) =>
-      Listeners.filter(({ Port }) => inputs.ports.includes(Port)).map(
-        ({ DefaultActions }) => DefaultActions[0].TargetGroupArn
-      )
+      Listeners.filter(({ Port }) => inputs.ports.includes(Port))
+        .map(({ DefaultActions }) =>
+          DefaultActions.map(({ TargetGroupArn }) => TargetGroupArn)
+        )
+        .flat(1)
+        .filter(Boolean)
     );
 
   if (!tgARNs.length) {
@@ -129,7 +131,7 @@ async function findSharedALBProdEnvId(
       }
       if (new Set(ids).size > 1) {
         throw new Error(
-          "Multiple environments are associated with a listener rule"
+          "Multiple environments are associated with the specified ports"
         );
       }
       return ids[0];
