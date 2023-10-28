@@ -72,18 +72,24 @@ async function createSharedALBEnv(
   prodEnv?: EnvironmentDescription,
   applicationVersion?: ApplicationVersionDescription
 ) {
-  const albARN = prodEnv
-    ? await ebClient
-        .send(
-          new DescribeEnvironmentResourcesCommand({
-            EnvironmentId: prodEnv.EnvironmentId,
-          })
-        )
-        .then(
-          ({ EnvironmentResources }) =>
-            EnvironmentResources.LoadBalancers[0].Name
-        )
-    : await createLoadBalancer(inputs).then((alb) => alb.LoadBalancerArn);
+  const SharedLoadBalancer = {
+    Namespace: "aws:elbv2:loadbalancer",
+    OptionName: "SharedLoadBalancer",
+    Value: prodEnv
+      ? await ebClient
+          .send(
+            new DescribeEnvironmentResourcesCommand({
+              EnvironmentId: prodEnv.EnvironmentId,
+            })
+          )
+          .then(
+            ({ EnvironmentResources }) =>
+              EnvironmentResources.LoadBalancers[0].Name
+          )
+      : await createLoadBalancer(inputs).then(
+          ({ LoadBalancerArn }) => LoadBalancerArn
+        ),
+  };
 
   const defaultOptionSettings = [
     {
@@ -107,11 +113,6 @@ async function createSharedALBEnv(
       Value: "true",
     },
     {
-      Namespace: "aws:elbv2:loadbalancer",
-      OptionName: "SharedLoadBalancer",
-      Value: albARN,
-    },
-    {
       Namespace: "aws:elasticbeanstalk:environment",
       OptionName: "ServiceRole",
       Value: "service-role/aws-elasticbeanstalk-service-role",
@@ -121,6 +122,7 @@ async function createSharedALBEnv(
       OptionName: "IamInstanceProfile",
       Value: "aws-elasticbeanstalk-ec2-role",
     },
+    SharedLoadBalancer,
   ];
 
   return await ebClient.send(
@@ -132,7 +134,9 @@ async function createSharedALBEnv(
           ? inputs.greenEnv
           : inputs.blueEnv,
       PlatformArn: await getPlatformArn(inputs.platformBranchName),
-      OptionSettings: inputs.useDefaultOptionSettings
+      OptionSettings: inputs.optionSettings
+        ? [...inputs.optionSettings, SharedLoadBalancer]
+        : inputs.useDefaultOptionSettings
         ? defaultOptionSettings
         : undefined,
       VersionLabel: applicationVersion?.VersionLabel,
@@ -178,7 +182,9 @@ async function createSwapCNAMEsEnv(
           : inputs.blueEnv,
       CNAMEPrefix: prodEnv ? inputs.stagingCNAME : inputs.productionCNAME,
       PlatformArn: await getPlatformArn(inputs.platformBranchName),
-      OptionSettings: inputs.useDefaultOptionSettings
+      OptionSettings: inputs.optionSettings
+        ? inputs.optionSettings
+        : inputs.useDefaultOptionSettings
         ? defaultOptionSettings
         : undefined,
       VersionLabel: applicationVersion?.VersionLabel,

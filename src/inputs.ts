@@ -1,5 +1,6 @@
 import * as core from "@actions/core";
 export type ActionInputs = ReturnType<typeof getInputs>;
+const fs = require("fs");
 
 export function getInputs() {
   const inputs = {
@@ -8,6 +9,9 @@ export function getInputs() {
     blueEnv: core.getInput("blue_env", { required: true }),
     deploy: core.getBooleanInput("deploy", { required: true }),
     greenEnv: core.getInput("green_env", { required: true }),
+    optionSettings: core.getInput("option_settings")
+      ? JSON.parse(fs.readFileSync(core.getInput("option_settings")))
+      : undefined,
     platformBranchName: core.getInput("platform_branch_name", {
       required: true,
     }),

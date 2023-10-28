@@ -26,6 +26,9 @@ inputs:
   green_env:
     description: "Name of the Green environment."
     required: true
+  option_settings:
+    description: "Path to a JSON file of option settings to use when creating a new environment. When using custom option settings, the default option settings will be ignored, but the SharedLoadBalancer will still be provided when using the `shared_alb` strategy."
+    required: false
   platform_branch_name:
     description: "Name of the platform branch to use. When creating a new environment, it will be launched with the latest version of the specified platform branch. To see the list of available platform branches, run the `aws elasticbeanstalk list-platform-branches` command."
     required: true

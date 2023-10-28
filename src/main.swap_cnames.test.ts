@@ -19,6 +19,7 @@ describe("swap_cnames strategy", () => {
     blueEnv: `my-blue-env-${key}`,
     deploy: true,
     greenEnv: `my-green-env-${key}`,
+    optionSettings: undefined,
     ports: [80],
     platformBranchName: "Docker running on 64bit Amazon Linux 2023",
     productionCNAME: `blue-green-test-prod-${key}`,
