@@ -66,7 +66,10 @@ export async function updateListener(
           DefaultActions: [
             {
               Type: "forward",
-              TargetGroupArn: targetGroupArn || mapPortToTargetGroup[port],
+              TargetGroupArn:
+                targetGroupArn ||
+                mapPortToTargetGroup[port] ||
+                mapPortToTargetGroup[inputs.ports[0]],
             },
           ],
         })
