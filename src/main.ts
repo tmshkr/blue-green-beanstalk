@@ -35,7 +35,7 @@ export async function main(inputs: ActionInputs) {
           await updateListener(inputs, targetEnv);
           break;
         case DeploymentStrategy.SwapCNAMEs:
-          await swapCNAMES(inputs);
+          await swapCNAMES(inputs, targetEnv);
           break;
         default:
           throw new Error(`Unknown strategy: ${inputs.strategy}`);
