@@ -1,42 +1,40 @@
 import {
   DescribeEnvironmentsCommand,
-  ElasticBeanstalkClient,
+  TerminateEnvironmentCommand,
 } from "@aws-sdk/client-elastic-beanstalk";
 
+import { ebClient } from "./clients";
 import { main } from "./main";
 import { spinDownEnvironment } from "./utils/spinDownEnvironment";
 const { randomBytes } = require("node:crypto");
 
-const region = "us-west-2";
-const ebClient = new ElasticBeanstalkClient();
+const key = randomBytes(3).toString("hex");
+const inputs = {
+  appName: `test-app-${key}`,
+  awsRegion: "us-west-2",
+  blueEnv: `my-blue-env-${key}`,
+  deploy: true,
+  greenEnv: `my-green-env-${key}`,
+  optionSettings: undefined,
+  ports: [80],
+  platformBranchName: "Docker running on 64bit Amazon Linux 2023",
+  productionCNAME: `blue-green-test-prod-${key}`,
+  promote: true,
+  sourceBundle: undefined,
+  stagingCNAME: `blue-green-test-staging-${key}`,
+  strategy: "swap_cnames",
+  templateName: undefined,
+  terminateUnhealthyEnvironment: true,
+  versionDescription: undefined,
+  versionLabel: `test-version-${key}`,
+  waitForEnvironment: true,
+  useDefaultOptionSettings: true,
+};
+const prodDomain = `${inputs.productionCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`;
+const stagingDomain = `${inputs.stagingCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`;
+
 jest.setTimeout(1000 * 60 * 10);
-
 describe("swap_cnames strategy", () => {
-  const key = randomBytes(3).toString("hex");
-  const inputs = {
-    appName: `test-app-${key}`,
-    awsRegion: region,
-    blueEnv: `my-blue-env-${key}`,
-    deploy: true,
-    greenEnv: `my-green-env-${key}`,
-    optionSettings: undefined,
-    ports: [80],
-    platformBranchName: "Docker running on 64bit Amazon Linux 2023",
-    productionCNAME: `blue-green-test-prod-${key}`,
-    promote: true,
-    sourceBundle: undefined,
-    stagingCNAME: `blue-green-test-staging-${key}`,
-    strategy: "swap_cnames",
-    templateName: undefined,
-    terminateUnhealthyEnvironment: true,
-    versionDescription: undefined,
-    versionLabel: `test-version-${key}`,
-    waitForEnvironment: true,
-    useDefaultOptionSettings: true,
-  };
-  const prodDomain = `${inputs.productionCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`;
-  const stagingDomain = `${inputs.stagingCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`;
-
   describe("create the production environment", () => {
     it("should not have any environments", async () => {
       const { Environments } = await ebClient.send(
@@ -174,4 +172,13 @@ describe("swap_cnames strategy", () => {
       }
     });
   });
+});
+
+afterAll(async () => {
+  await ebClient.send(
+    new TerminateEnvironmentCommand({ EnvironmentName: inputs.blueEnv })
+  );
+  await ebClient.send(
+    new TerminateEnvironmentCommand({ EnvironmentName: inputs.greenEnv })
+  );
 });

@@ -1,40 +1,41 @@
 import {
   DescribeEnvironmentResourcesCommand,
   DescribeEnvironmentsCommand,
+  TerminateEnvironmentCommand,
 } from "@aws-sdk/client-elastic-beanstalk";
-import { ebClient } from "./clients";
+import { DeleteLoadBalancerCommand } from "@aws-sdk/client-elastic-load-balancing-v2";
+import { ebClient, elbClient } from "./clients";
 import { getEnvironments } from "./getEnvironments";
 
 import { main } from "./main";
 const { randomBytes } = require("node:crypto");
 
-const region = "us-west-2";
 jest.setTimeout(1000 * 60 * 10);
 
-describe("shared_alb strategy", () => {
-  const key = randomBytes(3).toString("hex");
-  const inputs = {
-    appName: `shared-alb-test-${key}`,
-    awsRegion: region,
-    blueEnv: `my-blue-env-${key}`,
-    deploy: true,
-    greenEnv: `my-green-env-${key}`,
-    optionSettings: undefined,
-    ports: [80],
-    platformBranchName: "Docker running on 64bit Amazon Linux 2023",
-    productionCNAME: undefined,
-    promote: true,
-    sourceBundle: undefined,
-    stagingCNAME: undefined,
-    strategy: "shared_alb",
-    templateName: undefined,
-    terminateUnhealthyEnvironment: true,
-    versionDescription: undefined,
-    versionLabel: `test-version-${key}`,
-    waitForEnvironment: true,
-    useDefaultOptionSettings: true,
-  };
+const key = randomBytes(3).toString("hex");
+const inputs = {
+  appName: `shared-alb-test-${key}`,
+  awsRegion: "us-west-2",
+  blueEnv: `my-blue-env-${key}`,
+  deploy: true,
+  greenEnv: `my-green-env-${key}`,
+  optionSettings: undefined,
+  ports: [80],
+  platformBranchName: "Docker running on 64bit Amazon Linux 2023",
+  productionCNAME: undefined,
+  promote: true,
+  sourceBundle: undefined,
+  stagingCNAME: undefined,
+  strategy: "shared_alb",
+  templateName: undefined,
+  terminateUnhealthyEnvironment: true,
+  versionDescription: undefined,
+  versionLabel: `test-version-${key}`,
+  waitForEnvironment: true,
+  useDefaultOptionSettings: true,
+};
 
+describe("shared_alb strategy", () => {
   describe("create the production environment", () => {
     it("should not have any environments", async () => {
       const { Environments } = await ebClient.send(
@@ -57,6 +58,9 @@ describe("shared_alb strategy", () => {
       );
 
       expect(Environments).toHaveLength(1);
+      const { stagingEnv, prodEnv } = await getEnvironments(inputs);
+      expect(stagingEnv).toBeUndefined();
+      expect(prodEnv.EnvironmentId).toEqual(Environments[0].EnvironmentId);
     });
   });
 
@@ -103,4 +107,26 @@ describe("shared_alb strategy", () => {
       expect(prodEnv.EnvironmentId).toEqual(newEnv.EnvironmentId);
     });
   });
+});
+
+afterAll(async () => {
+  const loadBalancerArn = await ebClient
+    .send(
+      new DescribeEnvironmentResourcesCommand({
+        EnvironmentName: inputs.blueEnv,
+      })
+    )
+    .then(({ EnvironmentResources }) => {
+      expect(EnvironmentResources.LoadBalancers).toHaveLength(1);
+      return EnvironmentResources.LoadBalancers[0].Name;
+    });
+  await elbClient.send(
+    new DeleteLoadBalancerCommand({ LoadBalancerArn: loadBalancerArn })
+  );
+  await ebClient.send(
+    new TerminateEnvironmentCommand({ EnvironmentName: inputs.blueEnv })
+  );
+  await ebClient.send(
+    new TerminateEnvironmentCommand({ EnvironmentName: inputs.greenEnv })
+  );
 });
