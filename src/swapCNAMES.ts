@@ -1,6 +1,5 @@
 import {
   DescribeEnvironmentsCommand,
-  EnvironmentDescription,
   SwapEnvironmentCNAMEsCommand,
   waitUntilEnvironmentUpdated,
 } from "@aws-sdk/client-elastic-beanstalk";
@@ -8,10 +7,7 @@ import { ebClient } from "./clients";
 import { ActionInputs } from "./inputs";
 const core = require("@actions/core");
 
-export async function swapCNAMES(
-  inputs: ActionInputs,
-  targetEnv: EnvironmentDescription
-) {
+export async function swapCNAMES(inputs: ActionInputs) {
   const { Environments } = await ebClient.send(
     new DescribeEnvironmentsCommand({
       ApplicationName: inputs.appName,
@@ -19,17 +15,6 @@ export async function swapCNAMES(
       IncludeDeleted: false,
     })
   );
-
-  Environments.forEach((env) => {
-    if (
-      env.EnvironmentId === targetEnv.EnvironmentId &&
-      env.Health !== "Green"
-    ) {
-      throw new Error(
-        `Target environment ${targetEnv.EnvironmentName} is not healthy. Aborting promotion.`
-      );
-    }
-  });
 
   const blueEnv = Environments.find(
     (env) => env.EnvironmentName === inputs.blueEnv

@@ -30,12 +30,26 @@ export async function main(inputs: ActionInputs) {
       if (!targetEnv) {
         throw new Error("No target environment to promote");
       }
+      await ebClient
+        .send(
+          new DescribeEnvironmentsCommand({
+            EnvironmentIds: [targetEnv.EnvironmentId],
+          })
+        )
+        .then(({ Environments }) => {
+          if (Environments[0].Health !== "Green") {
+            throw new Error(
+              `Environment ${targetEnv.EnvironmentName} is not healthy. Aborting promotion.`
+            );
+          }
+        });
+
       switch (inputs.strategy) {
         case DeploymentStrategy.SharedALB:
           await updateListener(inputs, targetEnv);
           break;
         case DeploymentStrategy.SwapCNAMEs:
-          await swapCNAMES(inputs, targetEnv);
+          await swapCNAMES(inputs);
           break;
         default:
           throw new Error(`Unknown strategy: ${inputs.strategy}`);

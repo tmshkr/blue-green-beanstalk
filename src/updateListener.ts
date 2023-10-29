@@ -16,20 +16,6 @@ export async function updateListener(
   inputs: ActionInputs,
   targetEnv: EnvironmentDescription
 ) {
-  await ebClient
-    .send(
-      new DescribeEnvironmentsCommand({
-        EnvironmentIds: [targetEnv.EnvironmentId],
-      })
-    )
-    .then(({ Environments }) => {
-      if (Environments[0].Health !== "Green") {
-        throw new Error(
-          `Environment ${targetEnv.EnvironmentName} is not healthy. Aborting promotion.`
-        );
-      }
-    });
-
   const ports = new Set(inputs.ports);
   const { EnvironmentResources } = await ebClient.send(
     new DescribeEnvironmentResourcesCommand({
