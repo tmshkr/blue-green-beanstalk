@@ -5,6 +5,7 @@ import {
   DescribeTargetGroupsCommand,
 } from "@aws-sdk/client-elastic-load-balancing-v2";
 import {
+  DescribeEnvironmentsCommand,
   DescribeEnvironmentResourcesCommand,
   EnvironmentDescription,
 } from "@aws-sdk/client-elastic-beanstalk";
@@ -15,6 +16,21 @@ export async function updateListener(
   inputs: ActionInputs,
   targetEnv: EnvironmentDescription
 ) {
+  await ebClient
+    .send(
+      new DescribeEnvironmentsCommand({
+        EnvironmentIds: [targetEnv.EnvironmentId],
+      })
+    )
+    .then(({ Environments }) => {
+      if (Environments[0].Health !== "Green") {
+        throw new Error(
+          `Environment ${targetEnv.EnvironmentName} is not healthy. Aborting promotion.`
+        );
+      }
+    });
+
+  const ports = new Set(inputs.ports);
   const { EnvironmentResources } = await ebClient.send(
     new DescribeEnvironmentResourcesCommand({
       EnvironmentId: targetEnv.EnvironmentId,
@@ -44,7 +60,7 @@ export async function updateListener(
       .then(({ TargetGroups }) => {
         const map = {};
         for (const { Port, TargetGroupArn } of TargetGroups) {
-          if (inputs.ports.includes(Port)) {
+          if (ports.has(Port)) {
             map[Port] = TargetGroupArn;
           }
         }
@@ -59,22 +75,24 @@ export async function updateListener(
   );
 
   await Promise.all(
-    inputs.ports.map((port) =>
-      elbClient.send(
-        new ModifyListenerCommand({
-          ListenerArn: Listeners.find(({ Port }) => Port === port).ListenerArn,
-          DefaultActions: [
-            {
-              Type: "forward",
-              TargetGroupArn:
-                targetGroupArn ||
-                mapPortToTargetGroup[port] ||
-                mapPortToTargetGroup[inputs.ports[0]],
-            },
-          ],
-        })
-      )
-    )
+    Listeners.map(({ Port, ListenerArn }) => {
+      if (ports.has(Port)) {
+        return elbClient.send(
+          new ModifyListenerCommand({
+            ListenerArn: ListenerArn,
+            DefaultActions: [
+              {
+                Type: "forward",
+                TargetGroupArn:
+                  targetGroupArn ||
+                  mapPortToTargetGroup[Port] ||
+                  mapPortToTargetGroup[inputs.ports[0]],
+              },
+            ],
+          })
+        );
+      }
+    })
   );
 
   console.log("Updated ALB listener's default rule");
