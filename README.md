@@ -27,11 +27,11 @@ The action will then swap the CNAMEs of the staging and production environments 
 
 ### `shared_alb`
 
-The `shared_alb` strategy determines which environment is the production environment by finding the `elasticbeanstalk:environment-id` tags on the associated ALB target groups, which is automatically created by Elastic Beanstalk. If the target groups are not properly tagged, the action will fail.
+The `shared_alb` strategy determines which environment is the production environment by finding the `elasticbeanstalk:environment-id` tag on the associated ALB target groups, which is automatically created by Elastic Beanstalk. If the target groups are not properly tagged, the action will fail.
 
 If neither the blue or green environments exist, it will provision an Application Load Balancer to share between the environments, and then create the production environment. If the production environment already exists, the action will target the staging environment, creating it if it doesn't exist.
 
-When `promote` is set to true, the action will update the default action for each listener on the ALB with a port provided in the `ports` input, so that is forwards to the target group associated with the target environment.
+When `promote` is set to true, the action will update the default action for each listener on the ALB with a port provided in the `ports` input, so that it forwards to the target group associated with the target environment.
 
 When specifying multiple ports, the action will forward to the target group associated with that port, or else the target group associated with the first port provided, if no target group is associated with the port. For example, if `80,443,3000` is provided as the input, and only ports 80 and 3000 have target groups, the action will forward ports 80 and 443 to the target group for port 80, and port 3000 to the target group for port 3000.
 
