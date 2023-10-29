@@ -17,6 +17,10 @@ See [action.yml](action.yml)
 
 ## Deployment Strategies
 
+This action supports two blue/green deployment strategies: `swap_cnames` and `shared_alb`.
+
+The default strategy is `swap_cnames`.
+
 ### `swap_cnames`
 
 The `swap_cnames` strategy uses the value of the `production_cname` input to determine which environment is the production environment.
@@ -74,7 +78,6 @@ jobs:
           promote: ${{ github.ref_name == 'main' }}
           source_bundle: "bundle.zip"
           staging_cname: "blue-green-beanstalk-staging" # must be available
-          strategy: "swap_cnames"
           version_description: "Deployed by ${{ github.triggering_actor }}"
           version_label: ${{ github.ref_name }}-${{ github.sha }}
 ```
