@@ -22,6 +22,9 @@ export function setDescribeEventsInterval(
             e.Message
           }`
         );
+        if (e.Message === "Failed to launch environment.") {
+          throw new Error(e.Message);
+        }
       }
     } else {
       console.log(".");
