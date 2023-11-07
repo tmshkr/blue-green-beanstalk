@@ -1,4 +1,7 @@
-import { DescribeEventsCommand } from "@aws-sdk/client-elastic-beanstalk";
+import {
+  DescribeEventsCommand,
+  EventDescription,
+} from "@aws-sdk/client-elastic-beanstalk";
 import { ebClient } from "./clients";
 
 export function setDescribeEventsInterval(
@@ -22,8 +25,8 @@ export function setDescribeEventsInterval(
             e.Message
           }`
         );
-        if (e.Message === "Failed to launch environment.") {
-          throw new Error(e.Message);
+        if (e.Severity === "ERROR") {
+          handleError(e);
         }
       }
     } else {
@@ -37,4 +40,17 @@ function printUTCTime(date: Date) {
   return `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(
     date.getUTCSeconds()
   )}`;
+}
+
+function handleError(e: EventDescription) {
+  if (e.Message === "Failed to launch environment.") {
+    throw new Error(e.Message);
+  }
+  if (
+    e.Message.includes(
+      "Create environment operation is complete, but with errors."
+    )
+  ) {
+    throw new Error(e.Message);
+  }
 }
