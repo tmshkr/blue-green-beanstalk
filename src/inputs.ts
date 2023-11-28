@@ -32,7 +32,13 @@ export function getInputs() {
     ),
     versionDescription: core.getInput("version_description") || undefined,
     versionLabel: core.getInput("version_label") || undefined,
+    waitForDeployment: core.getBooleanInput("wait_for_deployment", {
+      required: true,
+    }),
     waitForEnvironment: core.getBooleanInput("wait_for_environment", {
+      required: true,
+    }),
+    waitForTermination: core.getBooleanInput("wait_for_termination", {
       required: true,
     }),
     useDefaultOptionSettings: core.getBooleanInput(
