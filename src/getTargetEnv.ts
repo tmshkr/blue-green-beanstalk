@@ -1,5 +1,5 @@
 import {
-  waitUntilEnvironmentExists,
+  waitUntilEnvironmentUpdated,
   waitUntilEnvironmentTerminated,
   EnvironmentDescription,
 } from "@aws-sdk/client-elastic-beanstalk";
@@ -21,7 +21,7 @@ export async function getTargetEnv(
   }
 
   if (targetEnv.Status === "Terminating") {
-    if (inputs.waitForEnvironment) {
+    if (inputs.waitForTermination) {
       console.log("Target environment is terminating. Waiting...");
       const interval = setDescribeEventsInterval(targetEnv.EnvironmentId);
       await waitUntilEnvironmentTerminated(
@@ -32,13 +32,13 @@ export async function getTargetEnv(
       return null;
     } else
       throw new Error(
-        "Target environment is terminating and wait_for_environment is set to false."
+        "Target environment is terminating and wait_for_termination is set to false."
       );
   } else if (targetEnv.Status !== "Ready") {
     if (inputs.waitForEnvironment) {
       console.log("Target environment is not ready. Waiting...");
       const interval = setDescribeEventsInterval(targetEnv.EnvironmentId);
-      await waitUntilEnvironmentExists(
+      await waitUntilEnvironmentUpdated(
         { client: ebClient, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
         { EnvironmentIds: [targetEnv.EnvironmentId] }
       );
