@@ -22,7 +22,7 @@ export async function deploy(
     })
   );
 
-  if (!inputs.waitForEnvironment) {
+  if (!inputs.waitForDeployment) {
     return;
   }
 

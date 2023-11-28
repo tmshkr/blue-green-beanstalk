@@ -54,7 +54,7 @@ export async function createEnvironment(
     `Creating environment ${newEnv.EnvironmentId} ${newEnv.EnvironmentName}...`
   );
 
-  if (!inputs.waitForEnvironment) {
+  if (!inputs.waitForDeployment) {
     return newEnv;
   }
 
