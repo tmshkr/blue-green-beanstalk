@@ -27,6 +27,9 @@ export async function main(inputs: ActionInputs) {
     }
 
     if (inputs.promote) {
+      console.log(
+        `Promoting environment ${targetEnv.EnvironmentName} to production...`
+      );
       if (!targetEnv) {
         throw new Error("No target environment to promote");
       }
@@ -40,6 +43,11 @@ export async function main(inputs: ActionInputs) {
           if (Environments[0].Health !== "Green") {
             throw new Error(
               `Environment ${targetEnv.EnvironmentName} is not healthy. Aborting promotion.`
+            );
+          }
+          if (Environments[0].Status !== "Ready") {
+            throw new Error(
+              `Environment ${targetEnv.EnvironmentName} is not ready. Aborting promotion.`
             );
           }
         });
