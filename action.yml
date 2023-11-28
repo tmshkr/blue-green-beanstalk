@@ -22,7 +22,7 @@ inputs:
   deploy:
     description: "Whether to deploy the new application version to the target environment."
     required: true
-    default: true
+    default: false
   green_env:
     description: "Name of the green environment."
     required: true
