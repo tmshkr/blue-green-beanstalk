@@ -5,7 +5,10 @@ const fs = require("fs");
 export function getInputs() {
   const inputs = {
     appName: core.getInput("app_name", { required: true }),
-    awsRegion: core.getInput("aws_region") || process.env.AWS_REGION,
+    awsRegion:
+      core.getInput("aws_region") ||
+      process.env.AWS_REGION ||
+      process.env.AWS_DEFAULT_REGION,
     blueEnv: core.getInput("blue_env", { required: true }),
     deploy: core.getBooleanInput("deploy", { required: true }),
     greenEnv: core.getInput("green_env", { required: true }),
