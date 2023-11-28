@@ -10,6 +10,8 @@ import { ebClient, s3Client } from "./clients";
 import { ActionInputs } from "./inputs";
 
 export async function getApplicationVersion(inputs: ActionInputs) {
+  if (!inputs.versionLabel) return null;
+
   const { ApplicationVersions } = await ebClient.send(
     new DescribeApplicationVersionsCommand({
       ApplicationName: inputs.appName,
@@ -22,12 +24,10 @@ export async function getApplicationVersion(inputs: ActionInputs) {
     return ApplicationVersions[0];
   }
 
-  const newVersion = await createApplicationVersion(inputs);
-  return newVersion;
+  return await createApplicationVersion(inputs);
 }
 
 async function createApplicationVersion(inputs: ActionInputs) {
-  if (!inputs.versionLabel) return null;
   let SourceBundle;
 
   if (inputs.sourceBundle) {
