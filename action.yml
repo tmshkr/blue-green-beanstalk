@@ -1,5 +1,5 @@
 name: "Blue/Green Beanstalk"
-description: "GitHub Action to automate deployment to Blue/Green environments on AWS Elastic Beanstalk."
+description: "Deploy to blue/green environments on AWS Elastic Beanstalk."
 inputs:
   app_name:
     description: "Name of the Elastic Beanstalk application. If it doesn't exist, it will be created."
@@ -17,14 +17,14 @@ inputs:
     description: "AWS session token for using temporary credentials. May instead be specified via the AWS_SESSION_TOKEN environment variable."
     required: false
   blue_env:
-    description: "Name of the Blue environment."
+    description: "Name of the blue environment."
     required: true
   deploy:
     description: "Whether to deploy the new application version to the target environment."
     required: true
     default: true
   green_env:
-    description: "Name of the Green environment."
+    description: "Name of the green environment."
     required: true
   option_settings:
     description: "Path to a JSON file of option settings to use when creating a new environment. When using custom option settings, the default option settings will be ignored, but the SharedLoadBalancer will still be provided when using the `shared_alb` strategy."
@@ -42,7 +42,7 @@ inputs:
   promote:
     description: "Whether to promote the target environment to production. When using the `swap_cnames` strategy, the action will swap the CNAMEs of the blue and green environments to redirect production traffic to the target environment. When using the `shared_alb` strategy, the action will update the shared Application Load Balancer's default listener rule to point to the target environment, replacing the other environment."
     required: true
-    default: true
+    default: false
   staging_cname:
     description: "CNAME prefix for the staging environment when using the `swap_cnames` strategy."
     required: false
@@ -66,8 +66,16 @@ inputs:
   version_label:
     description: "Version label to use for the new application version."
     required: false
+  wait_for_deployment:
+    description: "Whether to wait for the deployment or environment creation to complete."
+    required: true
+    default: true
   wait_for_environment:
-    description: "Whether to wait for an environment to update or terminate. If set to false, the action will exit with a non-error code during deployment, or exit with an error when the environment is terminating or otherwise not ready."
+    description: "Whether to wait for the target environment to be ready before deployment."
+    required: true
+    default: true
+  wait_for_termination:
+    description: "Whether to wait for an environment to be terminated."
     required: true
     default: true
   use_default_option_settings:
