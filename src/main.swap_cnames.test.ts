@@ -28,6 +28,8 @@ const inputs = {
   versionDescription: undefined,
   versionLabel: `test-version-${key}`,
   waitForEnvironment: true,
+  waitForDeployment: true,
+  waitForTermination: true,
   useDefaultOptionSettings: true,
 };
 const prodDomain = `${inputs.productionCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`;

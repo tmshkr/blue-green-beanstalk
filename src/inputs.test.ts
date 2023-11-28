@@ -26,6 +26,8 @@ describe("checkInputs", () => {
         versionDescription: undefined,
         versionLabel: `test-version-${key}`,
         waitForEnvironment: true,
+        waitForDeployment: true,
+        waitForTermination: true,
         useDefaultOptionSettings: true,
       })
     ).toThrow("blue_env and green_env must be different");
@@ -52,6 +54,8 @@ describe("checkInputs", () => {
         versionDescription: undefined,
         versionLabel: `test-version-${key}`,
         waitForEnvironment: true,
+        waitForDeployment: true,
+        waitForTermination: true,
         useDefaultOptionSettings: true,
       })
     ).toThrow("production_cname and staging_cname must be different");
