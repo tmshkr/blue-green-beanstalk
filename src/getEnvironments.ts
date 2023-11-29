@@ -43,9 +43,10 @@ export async function getEnvironments(inputs: ActionInputs): Promise<{
 
     case DeploymentStrategy.SwapCNAMEs:
       const prodDomain = `${inputs.productionCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`;
+      const stagingDomain = `${inputs.stagingCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`;
       return {
         prodEnv: Environments.find(({ CNAME }) => CNAME === prodDomain),
-        stagingEnv: Environments.find(({ CNAME }) => CNAME !== prodDomain),
+        stagingEnv: Environments.find(({ CNAME }) => CNAME === stagingDomain),
       };
 
     default:
