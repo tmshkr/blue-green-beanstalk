@@ -93,6 +93,11 @@ export function checkInputs(inputs: ActionInputs) {
         "production_cname is required when using the swap_cnames strategy"
       );
     }
+    if (!inputs.stagingCNAME) {
+      throw new Error(
+        "staging_cname is required when using the swap_cnames strategy"
+      );
+    }
     if (inputs.productionCNAME === inputs.stagingCNAME) {
       throw new Error("production_cname and staging_cname must be different");
     }
