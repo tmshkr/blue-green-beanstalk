@@ -26,7 +26,7 @@ export function setDescribeEventsInterval(
           }`
         );
         if (e.Severity === "ERROR") {
-          handleError(e);
+          throw new Error(e.Message);
         }
       }
     } else {
@@ -40,17 +40,4 @@ function printUTCTime(date: Date) {
   return `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(
     date.getUTCSeconds()
   )}`;
-}
-
-function handleError(e: EventDescription) {
-  if (e.Message === "Failed to launch environment.") {
-    throw new Error(e.Message);
-  }
-  if (
-    e.Message.includes(
-      "Create environment operation is complete, but with errors."
-    )
-  ) {
-    throw new Error(e.Message);
-  }
 }
