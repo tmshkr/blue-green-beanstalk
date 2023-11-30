@@ -23,6 +23,7 @@ export function getInputs() {
       .split(",")
       .map((str) => Number(str))
       .filter((num) => Boolean(num)),
+    prep: core.getBooleanInput("prep"),
     productionCNAME: core.getInput("production_cname") || undefined,
     promote: core.getBooleanInput("promote", { required: true }),
     sourceBundle: core.getInput("source_bundle") || undefined,

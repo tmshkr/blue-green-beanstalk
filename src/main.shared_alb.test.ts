@@ -22,6 +22,7 @@ const inputs = {
   optionSettings: undefined,
   ports: [80],
   platformBranchName: "Docker running on 64bit Amazon Linux 2023",
+  prep: false,
   productionCNAME: undefined,
   promote: true,
   sourceBundle: undefined,

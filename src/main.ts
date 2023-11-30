@@ -18,6 +18,14 @@ export async function main(inputs: ActionInputs) {
     const applicationVersion = await getApplicationVersion(inputs);
     let targetEnv = await getTargetEnv(inputs);
 
+    if (inputs.prep) {
+      if (!targetEnv) {
+        targetEnv = await createEnvironment(inputs, applicationVersion);
+      }
+      await setOutputs(targetEnv);
+      return;
+    }
+
     if (inputs.deploy) {
       if (targetEnv) {
         await deploy(inputs, targetEnv, applicationVersion);

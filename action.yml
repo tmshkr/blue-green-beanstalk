@@ -32,6 +32,10 @@ inputs:
   platform_branch_name:
     description: "Name of the platform branch to use. When creating a new environment, it will be launched with the latest version of the specified platform branch. To see the list of available platform branches, run the `aws elasticbeanstalk list-platform-branches` command."
     required: true
+  prep:
+    description: "When prep is set to true, the action will exit if the target environment is healthy, or create a new environment if it is not healthy. This is useful for preparing the target environment, e.g. with the sample application, before deploying a new application version in a later step."
+    required: true
+    default: false
   ports:
     description: "Comma-separated list of ALB listener ports for use with the `shared_alb` strategy. When using the action to create an ALB, HTTP listeners will be created for each port. To enable HTTPS, port 443 must be configured on the ALB with ACM. When using an existing ALB, the action will update each specified port's default listener rule to point to the target environment if `promote` is set to true."
     required: true
