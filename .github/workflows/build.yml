@@ -10,7 +10,6 @@ on:
 
 jobs:
   build:
-    name: Build and save dist file
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -21,8 +20,8 @@ jobs:
         run: |
           npm ci
           npm run build
-      - uses: EndBug/add-and-commit@v9
-        with:
-          default_author: github_actions
-          add: dist
-          push: true
+      - name: Save dist file
+        run: |
+          git add dist
+          git commit -m "Update dist file" || true
+          git push
