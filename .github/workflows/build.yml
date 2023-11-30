@@ -22,6 +22,8 @@ jobs:
           npm run build
       - name: Save dist file
         run: |
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
           git add dist
           git commit -m "Update dist file" || true
           git push
