@@ -22,7 +22,10 @@ function getCredentials() {
 
 const awsConfig = {
   credentials: getCredentials(),
-  region: process.env.INPUT_AWS_REGION || process.env.AWS_REGION,
+  region:
+    process.env.INPUT_AWS_REGION ||
+    process.env.AWS_REGION ||
+    process.env.AWS_DEFAULT_REGION,
 };
 
 export const asClient = new AutoScalingClient(awsConfig);
