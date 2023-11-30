@@ -1,0 +1,18 @@
+name: Update latest tag
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update latest tag
+        run: |
+          git push origin :refs/tags/latest
+          git tag latest
+          git push origin --tags
