@@ -114,4 +114,10 @@ export function checkInputs(inputs: ActionInputs) {
       throw new Error("the shared_alb strategy requires a port to be provided");
     }
   }
+
+  if (inputs.optionSettings) {
+    if (!Array.isArray(inputs.optionSettings)) {
+      throw new Error("option_settings must be an array");
+    }
+  }
 }
