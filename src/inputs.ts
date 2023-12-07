@@ -15,9 +15,7 @@ export function getInputs() {
     optionSettings: core.getInput("option_settings")
       ? JSON.parse(fs.readFileSync(core.getInput("option_settings")))
       : undefined,
-    platformBranchName: core.getInput("platform_branch_name", {
-      required: true,
-    }),
+    platformBranchName: core.getInput("platform_branch_name"),
     ports: core
       .getInput("ports", { required: true })
       .split(",")
