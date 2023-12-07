@@ -18,6 +18,8 @@ export async function deploy(
   await ebClient.send(
     new UpdateEnvironmentCommand({
       EnvironmentId: targetEnv.EnvironmentId,
+      OptionSettings: inputs.optionSettings,
+      TemplateName: inputs.templateName,
       VersionLabel: applicationVersion?.VersionLabel,
     })
   );
