@@ -34,6 +34,6 @@ export async function terminateEnvironment(
     clearInterval(interval);
   } else
     throw new Error(
-      "Target environment is terminating and wait_for_environment is set to false."
+      "Target environment is terminating and wait_for_termination is set to false."
     );
 }
