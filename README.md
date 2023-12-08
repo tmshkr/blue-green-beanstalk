@@ -72,6 +72,7 @@ jobs:
           aws_region: ${{ vars.AWS_REGION }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           blue_env: "my-blue-env"
+          deploy: true
           green_env: "my-green-env"
           platform_branch_name: "Docker running on 64bit Amazon Linux 2023"
           production_cname: "blue-green-beanstalk-prod" # must be available
