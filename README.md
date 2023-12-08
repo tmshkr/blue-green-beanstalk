@@ -65,13 +65,14 @@ jobs:
       - name: Generate source bundle
         run: echo ${{ github.ref_name }} > ENVIRONMENT && zip -r bundle.zip . -x '*.git*'
       - name: Deploy
-        uses: tmshkr/blue-green-beanstalk@v2.1
+        uses: tmshkr/blue-green-beanstalk@latest
         with:
           app_name: "test-app"
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_region: ${{ vars.AWS_REGION }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           blue_env: "my-blue-env"
+          deploy: true
           green_env: "my-green-env"
           platform_branch_name: "Docker running on 64bit Amazon Linux 2023"
           production_cname: "blue-green-beanstalk-prod" # must be available

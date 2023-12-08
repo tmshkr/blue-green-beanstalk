@@ -25,7 +25,7 @@ export async function terminateEnvironment(
     })
   );
 
-  if (inputs.waitForEnvironment) {
+  if (inputs.waitForTermination) {
     const interval = setDescribeEventsInterval(environmentId, startTime);
     await waitUntilEnvironmentTerminated(
       { client: ebClient, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
@@ -34,6 +34,6 @@ export async function terminateEnvironment(
     clearInterval(interval);
   } else
     throw new Error(
-      "Target environment is terminating and wait_for_environment is set to false."
+      "Target environment is terminating and wait_for_termination is set to false."
     );
 }

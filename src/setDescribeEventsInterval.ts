@@ -1,4 +1,7 @@
-import { DescribeEventsCommand } from "@aws-sdk/client-elastic-beanstalk";
+import {
+  DescribeEventsCommand,
+  EventDescription,
+} from "@aws-sdk/client-elastic-beanstalk";
 import { ebClient } from "./clients";
 
 export function setDescribeEventsInterval(
@@ -22,7 +25,7 @@ export function setDescribeEventsInterval(
             e.Message
           }`
         );
-        if (e.Message === "Failed to launch environment.") {
+        if (e.Severity === "ERROR") {
           throw new Error(e.Message);
         }
       }

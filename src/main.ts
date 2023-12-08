@@ -18,6 +18,14 @@ export async function main(inputs: ActionInputs) {
     const applicationVersion = await getApplicationVersion(inputs);
     let targetEnv = await getTargetEnv(inputs);
 
+    if (inputs.prep) {
+      if (!targetEnv) {
+        targetEnv = await createEnvironment(inputs, applicationVersion);
+      }
+      await setOutputs(targetEnv);
+      return;
+    }
+
     if (inputs.deploy) {
       if (targetEnv) {
         await deploy(inputs, targetEnv, applicationVersion);
@@ -27,6 +35,9 @@ export async function main(inputs: ActionInputs) {
     }
 
     if (inputs.promote) {
+      console.log(
+        `Promoting environment ${targetEnv.EnvironmentName} to production...`
+      );
       if (!targetEnv) {
         throw new Error("No target environment to promote");
       }
@@ -40,6 +51,11 @@ export async function main(inputs: ActionInputs) {
           if (Environments[0].Health !== "Green") {
             throw new Error(
               `Environment ${targetEnv.EnvironmentName} is not healthy. Aborting promotion.`
+            );
+          }
+          if (Environments[0].Status !== "Ready") {
+            throw new Error(
+              `Environment ${targetEnv.EnvironmentName} is not ready. Aborting promotion.`
             );
           }
         });

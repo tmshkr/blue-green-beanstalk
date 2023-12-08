@@ -18,6 +18,7 @@ const inputs = {
   optionSettings: undefined,
   ports: [80],
   platformBranchName: "Docker running on 64bit Amazon Linux 2023",
+  prep: false,
   productionCNAME: `blue-green-test-prod-${key}`,
   promote: true,
   sourceBundle: undefined,
@@ -28,6 +29,8 @@ const inputs = {
   versionDescription: undefined,
   versionLabel: `test-version-${key}`,
   waitForEnvironment: true,
+  waitForDeployment: true,
+  waitForTermination: true,
   useDefaultOptionSettings: true,
 };
 const prodDomain = `${inputs.productionCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`;
@@ -155,19 +158,19 @@ describe("swap_cnames strategy", () => {
     });
   });
 
-  describe("wait_for_environment", () => {
-    it("should not wait for the environment to be healthy when wait_for_environment is set to false", async () => {
+  describe("wait_for_termination", () => {
+    it("should not wait for the environment to terminate when wait_for_termination is set to false", async () => {
       try {
         await main({
           ...inputs,
           terminateUnhealthyEnvironment: true,
-          waitForEnvironment: false,
+          waitForTermination: false,
           deploy: false,
         });
         throw new Error("Should not reach here");
       } catch (err) {
         expect(err.message).toEqual(
-          "Target environment is terminating and wait_for_environment is set to false."
+          "Target environment is terminating and wait_for_termination is set to false."
         );
       }
     });

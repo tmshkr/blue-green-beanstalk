@@ -16,6 +16,7 @@ describe("checkInputs", () => {
         optionSettings: undefined,
         platformBranchName: "Docker running on 64bit Amazon Linux 2023",
         ports: [80],
+        prep: false,
         productionCNAME: `blue-green-test-${key}`,
         promote: true,
         sourceBundle: undefined,
@@ -26,6 +27,8 @@ describe("checkInputs", () => {
         versionDescription: undefined,
         versionLabel: `test-version-${key}`,
         waitForEnvironment: true,
+        waitForDeployment: true,
+        waitForTermination: true,
         useDefaultOptionSettings: true,
       })
     ).toThrow("blue_env and green_env must be different");
@@ -42,6 +45,7 @@ describe("checkInputs", () => {
         optionSettings: undefined,
         platformBranchName: "Docker running on 64bit Amazon Linux 2023",
         ports: [80],
+        prep: false,
         productionCNAME: `same-${key}`,
         promote: true,
         sourceBundle: undefined,
@@ -52,6 +56,8 @@ describe("checkInputs", () => {
         versionDescription: undefined,
         versionLabel: `test-version-${key}`,
         waitForEnvironment: true,
+        waitForDeployment: true,
+        waitForTermination: true,
         useDefaultOptionSettings: true,
       })
     ).toThrow("production_cname and staging_cname must be different");

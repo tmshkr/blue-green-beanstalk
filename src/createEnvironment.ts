@@ -14,6 +14,11 @@ import { setDescribeEventsInterval } from "./setDescribeEventsInterval";
 import { createLoadBalancer } from "./createLoadBalancer";
 
 async function getPlatformArn(platformBranchName: string) {
+  if (!platformBranchName) {
+    throw new Error(
+      "platform_branch_name must be provided when creating a new environment"
+    );
+  }
   const { PlatformSummaryList } = await ebClient.send(
     new ListPlatformVersionsCommand({
       Filters: [
@@ -54,7 +59,7 @@ export async function createEnvironment(
     `Creating environment ${newEnv.EnvironmentId} ${newEnv.EnvironmentName}...`
   );
 
-  if (!inputs.waitForEnvironment) {
+  if (!inputs.waitForDeployment) {
     return newEnv;
   }
 

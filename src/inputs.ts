@@ -5,21 +5,23 @@ const fs = require("fs");
 export function getInputs() {
   const inputs = {
     appName: core.getInput("app_name", { required: true }),
-    awsRegion: core.getInput("aws_region") || process.env.AWS_REGION,
+    awsRegion:
+      core.getInput("aws_region") ||
+      process.env.AWS_REGION ||
+      process.env.AWS_DEFAULT_REGION,
     blueEnv: core.getInput("blue_env", { required: true }),
     deploy: core.getBooleanInput("deploy", { required: true }),
     greenEnv: core.getInput("green_env", { required: true }),
     optionSettings: core.getInput("option_settings")
       ? JSON.parse(fs.readFileSync(core.getInput("option_settings")))
       : undefined,
-    platformBranchName: core.getInput("platform_branch_name", {
-      required: true,
-    }),
+    platformBranchName: core.getInput("platform_branch_name"),
     ports: core
       .getInput("ports", { required: true })
       .split(",")
       .map((str) => Number(str))
       .filter((num) => Boolean(num)),
+    prep: core.getBooleanInput("prep"),
     productionCNAME: core.getInput("production_cname") || undefined,
     promote: core.getBooleanInput("promote", { required: true }),
     sourceBundle: core.getInput("source_bundle") || undefined,
@@ -32,7 +34,13 @@ export function getInputs() {
     ),
     versionDescription: core.getInput("version_description") || undefined,
     versionLabel: core.getInput("version_label") || undefined,
+    waitForDeployment: core.getBooleanInput("wait_for_deployment", {
+      required: true,
+    }),
     waitForEnvironment: core.getBooleanInput("wait_for_environment", {
+      required: true,
+    }),
+    waitForTermination: core.getBooleanInput("wait_for_termination", {
       required: true,
     }),
     useDefaultOptionSettings: core.getBooleanInput(
@@ -84,6 +92,11 @@ export function checkInputs(inputs: ActionInputs) {
         "production_cname is required when using the swap_cnames strategy"
       );
     }
+    if (!inputs.stagingCNAME) {
+      throw new Error(
+        "staging_cname is required when using the swap_cnames strategy"
+      );
+    }
     if (inputs.productionCNAME === inputs.stagingCNAME) {
       throw new Error("production_cname and staging_cname must be different");
     }
@@ -97,6 +110,12 @@ export function checkInputs(inputs: ActionInputs) {
     }
     if (inputs.ports.length === 0) {
       throw new Error("the shared_alb strategy requires a port to be provided");
+    }
+  }
+
+  if (inputs.optionSettings) {
+    if (!Array.isArray(inputs.optionSettings)) {
+      throw new Error("option_settings must be an array");
     }
   }
 }
