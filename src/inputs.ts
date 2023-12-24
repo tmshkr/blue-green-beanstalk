@@ -11,6 +11,12 @@ export function getInputs() {
       process.env.AWS_DEFAULT_REGION,
     blueEnv: core.getInput("blue_env", { required: true }),
     deploy: core.getBooleanInput("deploy", { required: true }),
+    disableTerminationProtection: core.getBooleanInput(
+      "disable_termination_protection"
+    ),
+    enableTerminationProtection: core.getBooleanInput(
+      "enable_termination_protection"
+    ),
     greenEnv: core.getInput("green_env", { required: true }),
     optionSettings: core.getInput("option_settings")
       ? JSON.parse(fs.readFileSync(core.getInput("option_settings")))

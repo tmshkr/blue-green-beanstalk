@@ -1,15 +1,16 @@
 import {
+  EnvironmentDescription,
   TerminateEnvironmentCommand,
   waitUntilEnvironmentTerminated,
 } from "@aws-sdk/client-elastic-beanstalk";
 import { ebClient } from "./clients";
 import { setDescribeEventsInterval } from "./setDescribeEventsInterval";
 import { ActionInputs } from "./inputs";
+import { disableTerminationProtection } from "./updateTerminationProtection";
 
 export async function terminateEnvironment(
   inputs: ActionInputs,
-  environmentId: string,
-  environmentName: string
+  env: EnvironmentDescription
 ) {
   if (!inputs.terminateUnhealthyEnvironment) {
     throw new Error(
@@ -17,19 +18,25 @@ export async function terminateEnvironment(
     );
   }
 
-  console.log(`Terminating environment ${environmentId} ${environmentName}...`);
+  if (inputs.disableTerminationProtection) {
+    await disableTerminationProtection(env);
+  }
+
+  console.log(
+    `[${env.EnvironmentName}]: Terminating environment ${env.EnvironmentId}...`
+  );
   const startTime = new Date();
   await ebClient.send(
     new TerminateEnvironmentCommand({
-      EnvironmentId: environmentId,
+      EnvironmentId: env.EnvironmentId,
     })
   );
 
   if (inputs.waitForTermination) {
-    const interval = setDescribeEventsInterval(environmentId, startTime);
+    const interval = setDescribeEventsInterval(env.EnvironmentId, startTime);
     await waitUntilEnvironmentTerminated(
       { client: ebClient, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
-      { EnvironmentIds: [environmentId] }
+      { EnvironmentIds: [env.EnvironmentId] }
     );
     clearInterval(interval);
   } else

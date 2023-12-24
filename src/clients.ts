@@ -1,4 +1,5 @@
 import { AutoScalingClient } from "@aws-sdk/client-auto-scaling";
+import { CloudFormationClient } from "@aws-sdk/client-cloudformation";
 import { ElasticBeanstalkClient } from "@aws-sdk/client-elastic-beanstalk";
 import { EC2Client } from "@aws-sdk/client-ec2";
 import { ElasticLoadBalancingV2Client } from "@aws-sdk/client-elastic-load-balancing-v2";
@@ -29,6 +30,7 @@ const awsConfig = {
 };
 
 export const asClient = new AutoScalingClient(awsConfig);
+export const cfnClient = new CloudFormationClient(awsConfig);
 export const ebClient = new ElasticBeanstalkClient(awsConfig);
 export const ec2Client = new EC2Client(awsConfig);
 export const elbClient = new ElasticLoadBalancingV2Client(awsConfig);

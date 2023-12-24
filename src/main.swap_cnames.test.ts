@@ -14,6 +14,8 @@ const inputs = {
   awsRegion: "us-west-2",
   blueEnv: `my-blue-env-${key}`,
   deploy: true,
+  disableTerminationProtection: false,
+  enableTerminationProtection: false,
   greenEnv: `my-green-env-${key}`,
   optionSettings: undefined,
   ports: [80],

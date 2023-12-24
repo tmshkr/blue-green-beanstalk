@@ -57,29 +57,17 @@ export async function getTargetEnv(
 
     case "Yellow":
       console.log("Target environment's health is Yellow.");
-      await terminateEnvironment(
-        inputs,
-        targetEnv.EnvironmentId,
-        targetEnv.EnvironmentName
-      );
+      await terminateEnvironment(inputs, targetEnv);
       return null;
 
     case "Red":
       console.log("Target environment's health is Red.");
-      await terminateEnvironment(
-        inputs,
-        targetEnv.EnvironmentId,
-        targetEnv.EnvironmentName
-      );
+      await terminateEnvironment(inputs, targetEnv);
       return null;
 
     case "Grey":
       console.log("Target environment's health is Grey.");
-      await terminateEnvironment(
-        inputs,
-        targetEnv.EnvironmentId,
-        targetEnv.EnvironmentName
-      );
+      await terminateEnvironment(inputs, targetEnv);
       return null;
 
     default:

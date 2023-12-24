@@ -12,6 +12,7 @@ import { deploy } from "./deploy";
 import { swapCNAMES } from "./swapCNAMES";
 import { ActionInputs, DeploymentStrategy } from "./inputs";
 import { updateListener } from "./updateListener";
+import { enableTerminationProtection } from "./updateTerminationProtection";
 
 export async function main(inputs: ActionInputs) {
   try {
@@ -32,6 +33,10 @@ export async function main(inputs: ActionInputs) {
       } else {
         targetEnv = await createEnvironment(inputs, applicationVersion);
       }
+    }
+
+    if (inputs.enableTerminationProtection) {
+      await enableTerminationProtection(targetEnv);
     }
 
     if (inputs.promote) {
