@@ -63,9 +63,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Generate source bundle
-        run: echo ${{ github.ref_name }} > ENVIRONMENT && zip -r bundle.zip . -x '*.git*'
+        run: zip -r bundle.zip . -x '*.git*'
       - name: Deploy
-        uses: tmshkr/blue-green-beanstalk@latest
+        uses: tmshkr/blue-green-beanstalk@v3
         with:
           app_name: "test-app"
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -75,10 +75,10 @@ jobs:
           deploy: true
           green_env: "my-green-env"
           platform_branch_name: "Docker running on 64bit Amazon Linux 2023"
-          production_cname: "blue-green-beanstalk-prod" # must be available
+          production_cname: "blue-green-beanstalk-prod"
           promote: ${{ github.ref_name == 'main' }}
           source_bundle: "bundle.zip"
-          staging_cname: "blue-green-beanstalk-staging" # must be available
-          version_description: "Deployed by ${{ github.triggering_actor }}"
+          staging_cname: "blue-green-beanstalk-staging"
+          version_description: ${{ github.event.head_commit.message }}
           version_label: ${{ github.ref_name }}-${{ github.sha }}
 ```
