@@ -1,4 +1,4 @@
-name: Update latest tag
+name: Update tags
 on:
   workflow_dispatch:
   release:
