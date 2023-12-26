@@ -26,7 +26,7 @@ export function getInputs() {
     productionCNAME: core.getInput("production_cname", { required: true }),
     sourceBundle: core.getInput("source_bundle") || undefined,
     stagingCNAME: core.getInput("staging_cname", { required: true }),
-    swap_cnames: core.getBooleanInput("swap_cnames", { required: true }),
+    swapCNAMEs: core.getBooleanInput("swap_cnames", { required: true }),
     templateName: core.getInput("template_name") || undefined,
     terminateUnhealthyEnvironment: core.getBooleanInput(
       "terminate_unhealthy_environment",
