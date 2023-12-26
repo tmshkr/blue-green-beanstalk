@@ -1,6 +1,7 @@
 import { DescribeSubnetsCommand } from "@aws-sdk/client-ec2";
 import {
   CreateLoadBalancerCommand,
+  CreateListenerCommand,
   waitUntilLoadBalancerAvailable,
 } from "@aws-sdk/client-elastic-load-balancing-v2";
 import { elbClient, ec2Client } from "./clients";
@@ -32,6 +33,24 @@ export async function createLoadBalancer(inputs: ActionInputs) {
       })
     )
     .then(({ LoadBalancers }) => LoadBalancers[0]);
+
+  await elbClient.send(
+    new CreateListenerCommand({
+      LoadBalancerArn: alb.LoadBalancerArn,
+      Protocol: "HTTP",
+      Port: 80,
+      DefaultActions: [
+        {
+          Type: "fixed-response",
+          FixedResponseConfig: {
+            StatusCode: "200",
+            ContentType: "text/plain",
+            MessageBody: "OK",
+          },
+        },
+      ],
+    })
+  );
 
   console.log(`Created load balancer ${alb.LoadBalancerArn}`);
   console.log(`Waiting for it to become available...`);
