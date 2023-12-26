@@ -10,8 +10,7 @@ import { getTargetEnv } from "./getTargetEnv";
 import { createEnvironment } from "./createEnvironment";
 import { deploy } from "./deploy";
 import { swapCNAMES } from "./swapCNAMES";
-import { ActionInputs, DeploymentStrategy } from "./inputs";
-import { updateListener } from "./updateListener";
+import { ActionInputs } from "./inputs";
 import { enableTerminationProtection } from "./updateTerminationProtection";
 
 export async function main(inputs: ActionInputs) {
@@ -39,7 +38,7 @@ export async function main(inputs: ActionInputs) {
       await enableTerminationProtection(targetEnv);
     }
 
-    if (inputs.promote) {
+    if (inputs.swap_cnames) {
       console.log(
         `Promoting environment ${targetEnv.EnvironmentName} to production...`
       );
@@ -65,16 +64,7 @@ export async function main(inputs: ActionInputs) {
           }
         });
 
-      switch (inputs.strategy) {
-        case DeploymentStrategy.SharedALB:
-          await updateListener(inputs, targetEnv);
-          break;
-        case DeploymentStrategy.SwapCNAMEs:
-          await swapCNAMES(inputs);
-          break;
-        default:
-          throw new Error(`Unknown strategy: ${inputs.strategy}`);
-      }
+      await swapCNAMES(inputs);
     }
 
     await setOutputs(targetEnv);

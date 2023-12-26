@@ -28,27 +28,23 @@ inputs:
     description: "Name of the green environment."
     required: true
   option_settings:
-    description: "Path to a JSON file of option settings to use when creating a new environment. When using custom option settings, the default option settings will be ignored, but the SharedLoadBalancer will still be provided when using the `shared_alb` strategy."
+    description: "Path to a JSON file consisting of an array of option settings to use when creating a new environment. When using custom option settings, the default option settings will be ignored, but the SharedLoadBalancer will still be provided when use_shared_alb is set to true."
   platform_branch_name:
     description: "Name of the platform branch to use. When creating a new environment, it will be launched with the latest version of the specified platform branch. To see the list of available platform branches, run the `aws elasticbeanstalk list-platform-branches` command."
   prep:
     description: "When prep is set to true, the action will exit if the target environment is healthy, or create a new environment if it is not healthy. This is useful for preparing the target environment, e.g. with the sample application, before deploying a new application version in a later step."
     default: "false"
-  ports:
-    description: "Comma-separated list of ALB listener ports for use with the `shared_alb` strategy. When using the action to create an ALB, HTTP listeners will be created for each port. To enable HTTPS, port 443 must be configured on the ALB with ACM. When using an existing ALB, the action will update each specified port's default listener rule to point to the target environment if `promote` is set to true."
-    default: "80"
   production_cname:
-    description: "CNAME prefix for the domain that serves production traffic. Only required for the `swap_cnames` strategy."
-  promote:
-    description: "Whether to promote the target environment to production. When using the `swap_cnames` strategy, the action will swap the CNAMEs of the blue and green environments to redirect production traffic to the target environment. When using the `shared_alb` strategy, the action will update the shared Application Load Balancer's default listener rule to point to the target environment, replacing the other environment."
-    default: "false"
-  staging_cname:
-    description: "CNAME prefix for the staging environment when using the `swap_cnames` strategy."
+    description: "CNAME prefix for the domain that serves production traffic."
+    required: true
   source_bundle:
     description: "Path to the source bundle to deploy. If not specified, the sample application will be used."
-  strategy:
-    description: "Deployment strategy to use: `swap_cnames` or `shared_alb`. See the `promote` input description for more details."
-    default: "swap_cnames"
+  staging_cname:
+    description: "CNAME prefix for the staging environment."
+    required: true
+  swap_cnames:
+    description: "Whether to swap the CNAMEs of the blue and green environments."
+    default: "false"
   template_name:
     description: "Name of an Elastic Beanstalk configuration template to use when creating a new environment."
   terminate_unhealthy_environment:
@@ -70,6 +66,9 @@ inputs:
   use_default_option_settings:
     description: "Whether to use default option settings when creating a new environment."
     default: "true"
+  use_shared_alb:
+    description: "Whether to use a shared Application Load Balancer when creating a new environment."
+    default: "false"
 outputs:
   target_env_cname:
     description: "CNAME of the target environment."
