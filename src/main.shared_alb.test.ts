@@ -14,7 +14,7 @@ jest.setTimeout(1000 * 60 * 10);
 
 const key = randomBytes(3).toString("hex");
 const inputs = {
-  appName: `shared-alb-test-${key}`,
+  appName: `alb-test`,
   awsRegion: "us-west-2",
   blueEnv: `my-blue-env-${key}`,
   deploy: true,
@@ -22,22 +22,21 @@ const inputs = {
   enableTerminationProtection: false,
   greenEnv: `my-green-env-${key}`,
   optionSettings: undefined,
-  ports: [80],
   platformBranchName: "Docker running on 64bit Amazon Linux 2023",
   prep: false,
-  productionCNAME: undefined,
-  promote: true,
+  productionCNAME: `shared-alb-test-prod-${key}`,
   sourceBundle: undefined,
-  stagingCNAME: undefined,
-  strategy: "shared_alb",
+  stagingCNAME: `shared-alb-test-staging-${key}`,
+  swapCNAMEs: true,
   templateName: undefined,
   terminateUnhealthyEnvironment: true,
+  useDefaultOptionSettings: true,
+  useSharedALB: true,
   versionDescription: undefined,
-  versionLabel: `test-version-${key}`,
+  versionLabel: undefined,
   waitForEnvironment: true,
   waitForDeployment: true,
   waitForTermination: true,
-  useDefaultOptionSettings: true,
 };
 
 describe("shared_alb strategy", () => {
