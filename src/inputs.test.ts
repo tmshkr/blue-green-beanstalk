@@ -1,69 +1,192 @@
 import { checkInputs } from "./inputs";
-const { randomBytes } = require("node:crypto");
+import fs from "fs";
 
 const region = "us-west-2";
 
+beforeAll(() => {
+  fs.writeFileSync("test.json", JSON.stringify({ test: "test" }));
+});
+
 describe("checkInputs", () => {
-  const key = randomBytes(3).toString("hex");
-  it("should throw an error when blueEnv and greenEnv are the same", () => {
+  it("should throw an error when AWS_REGION is not provided", () => {
     expect(() =>
       checkInputs({
-        appName: `test-app-${key}`,
-        awsRegion: region,
-        blueEnv: `same-${key}`,
+        appName: `test-app`,
+        awsRegion: undefined,
+        blueEnv: `my-blue-env`,
         deploy: true,
         disableTerminationProtection: false,
         enableTerminationProtection: false,
-        greenEnv: `same-${key}`,
+        greenEnv: `my-green-env`,
         optionSettings: undefined,
         platformBranchName: "Docker running on 64bit Amazon Linux 2023",
-        ports: [80],
         prep: false,
-        productionCNAME: `blue-green-test-${key}`,
-        promote: true,
+        productionCNAME: `prod-cname`,
         sourceBundle: undefined,
-        stagingCNAME: `blue-green-test-staging-${key}`,
-        strategy: "swap_cnames",
+        stagingCNAME: `staging-cname`,
+        swapCNAMEs: true,
         templateName: undefined,
         terminateUnhealthyEnvironment: true,
+        useDefaultOptionSettings: true,
+        useSharedALB: false,
         versionDescription: undefined,
-        versionLabel: `test-version-${key}`,
+        versionLabel: undefined,
         waitForEnvironment: true,
         waitForDeployment: true,
         waitForTermination: true,
+      })
+    ).toThrow("aws_region must be provided");
+  });
+
+  it("should throw an error when blueEnv and greenEnv are the same", () => {
+    expect(() =>
+      checkInputs({
+        appName: `test-app`,
+        awsRegion: region,
+        blueEnv: `same`,
+        deploy: true,
+        disableTerminationProtection: false,
+        enableTerminationProtection: false,
+        greenEnv: `same`,
+        optionSettings: undefined,
+        platformBranchName: "Docker running on 64bit Amazon Linux 2023",
+        prep: false,
+        productionCNAME: `prod-cname`,
+        sourceBundle: undefined,
+        stagingCNAME: `staging-cname`,
+        swapCNAMEs: true,
+        templateName: undefined,
+        terminateUnhealthyEnvironment: true,
         useDefaultOptionSettings: true,
+        useSharedALB: false,
+        versionDescription: undefined,
+        versionLabel: undefined,
+        waitForEnvironment: true,
+        waitForDeployment: true,
+        waitForTermination: true,
       })
     ).toThrow("blue_env and green_env must be different");
+  });
+
+  it("should throw an error when sourceBundle and versionLabel are not provided together", () => {
+    expect(() =>
+      checkInputs({
+        appName: `test-app`,
+        awsRegion: region,
+        blueEnv: "my-blue-env",
+        deploy: true,
+        disableTerminationProtection: false,
+        enableTerminationProtection: false,
+        greenEnv: "my-green-env",
+        optionSettings: undefined,
+        platformBranchName: "Docker running on 64bit Amazon Linux 2023",
+        prep: false,
+        productionCNAME: `prod-cname`,
+        sourceBundle: "bundle.zip",
+        stagingCNAME: `staging-cname`,
+        swapCNAMEs: true,
+        templateName: undefined,
+        terminateUnhealthyEnvironment: true,
+        useDefaultOptionSettings: true,
+        useSharedALB: false,
+        versionDescription: undefined,
+        versionLabel: undefined,
+        waitForEnvironment: true,
+        waitForDeployment: true,
+        waitForTermination: true,
+      })
+    ).toThrow("source_bundle and version_label must be provided together");
+
+    expect(() =>
+      checkInputs({
+        appName: `test-app`,
+        awsRegion: region,
+        blueEnv: "my-blue-env",
+        deploy: true,
+        disableTerminationProtection: false,
+        enableTerminationProtection: false,
+        greenEnv: "my-green-env",
+        optionSettings: undefined,
+        platformBranchName: "Docker running on 64bit Amazon Linux 2023",
+        prep: false,
+        productionCNAME: `prod-cname`,
+        sourceBundle: undefined,
+        stagingCNAME: `staging-cname`,
+        swapCNAMEs: true,
+        templateName: undefined,
+        terminateUnhealthyEnvironment: true,
+        useDefaultOptionSettings: true,
+        useSharedALB: false,
+        versionDescription: undefined,
+        versionLabel: "test-version",
+        waitForEnvironment: true,
+        waitForDeployment: true,
+        waitForTermination: true,
+      })
+    ).toThrow("source_bundle and version_label must be provided together");
   });
 
   it("should throw an error when productionCNAME and stagingCNAME are the same", () => {
     expect(() =>
       checkInputs({
-        appName: `test-app-${key}`,
+        appName: `test-app`,
         awsRegion: region,
-        blueEnv: `my-blue-env-${key}`,
+        blueEnv: `my-blue-env`,
         deploy: true,
         disableTerminationProtection: false,
         enableTerminationProtection: false,
-        greenEnv: `my-green-env-${key}`,
+        greenEnv: `my-green-env`,
         optionSettings: undefined,
         platformBranchName: "Docker running on 64bit Amazon Linux 2023",
-        ports: [80],
         prep: false,
-        productionCNAME: `same-${key}`,
-        promote: true,
+        productionCNAME: `same`,
         sourceBundle: undefined,
-        stagingCNAME: `same-${key}`,
-        strategy: "swap_cnames",
+        stagingCNAME: `same`,
+        swapCNAMEs: true,
         templateName: undefined,
         terminateUnhealthyEnvironment: true,
+        useDefaultOptionSettings: true,
+        useSharedALB: false,
         versionDescription: undefined,
-        versionLabel: `test-version-${key}`,
+        versionLabel: undefined,
         waitForEnvironment: true,
         waitForDeployment: true,
         waitForTermination: true,
-        useDefaultOptionSettings: true,
       })
     ).toThrow("production_cname and staging_cname must be different");
   });
+
+  it("should throw an error when provided option settings are not a JSON array", () => {
+    expect(() =>
+      checkInputs({
+        appName: `test-app`,
+        awsRegion: region,
+        blueEnv: `my-blue-env`,
+        deploy: true,
+        disableTerminationProtection: false,
+        enableTerminationProtection: false,
+        greenEnv: `my-green-env`,
+        optionSettings: "test.json",
+        platformBranchName: "Docker running on 64bit Amazon Linux 2023",
+        prep: false,
+        productionCNAME: `prod-cname`,
+        sourceBundle: undefined,
+        stagingCNAME: `staging-cname`,
+        swapCNAMEs: true,
+        templateName: undefined,
+        terminateUnhealthyEnvironment: true,
+        useDefaultOptionSettings: true,
+        useSharedALB: false,
+        versionDescription: undefined,
+        versionLabel: undefined,
+        waitForEnvironment: true,
+        waitForDeployment: true,
+        waitForTermination: true,
+      })
+    ).toThrow("option_settings must be an array");
+  });
+});
+
+afterAll(() => {
+  fs.unlinkSync("test.json");
 });
