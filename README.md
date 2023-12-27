@@ -7,41 +7,25 @@ The action will create the following resources:
 - An Elastic Beanstalk application, if it doesn't already exist.
 - An Elastic Beanstalk application version, if it doesn't already exist.
 - An Elastic Beanstalk environment, if it doesn't already exist.
-- An Application Load Balancer, if it doesn't already exist, when using the `shared_alb` strategy.
+- An Application Load Balancer, if it doesn't already exist, when `use_shared_alb` is set to true.
 
 Based on the provided inputs, the action will determine which environment is the target environment, i.e., the environment to which a new application version should be deployed.
 
-## Inputs/Outputs
-
-See [action.yml](action.yml)
-
-## Deployment Strategies
-
-This action supports two blue/green deployment strategies: `swap_cnames` and `shared_alb`.
-
-The default strategy is `swap_cnames`.
-
-### `swap_cnames`
-
-The `swap_cnames` strategy uses the value of the `production_cname` input to determine which environment is the production environment.
+The action uses the values of the `production_cname` and `staging_cname` inputs to determine which environment is the production or staging environment.
 
 If neither the blue or green environments exist, it will create a new environment with the `production_cname` input. If the production environment already exists, the action will target the staging environment, creating it if it doesn't exist.
 
 The action will then swap the CNAMEs of the staging and production environments if `promote` is set to true.
 
-### `shared_alb`
+## Inputs/Outputs
 
-The `shared_alb` strategy determines which environment is the production environment by finding the `elasticbeanstalk:environment-id` tag on the associated ALB target groups, which is automatically created by Elastic Beanstalk. If the target groups are not properly tagged, the action will fail.
-
-If neither the blue or green environments exist, it will provision an Application Load Balancer to share between the environments, and then create the production environment. If the production environment already exists, the action will target the staging environment, creating it if it doesn't exist.
-
-When `promote` is set to true, the action will update the default action for each listener on the ALB with a port provided in the `ports` input, so that it forwards to the target group associated with the target environment.
-
-When specifying multiple ports, the action will forward to the target group associated with that port, or else the target group associated with the first port provided, if no target group is associated with the port. For example, if `80,443,3000` is provided as the input, and only ports 80 and 3000 have target groups, the action will forward ports 80 and 443 to the target group for port 80, and port 3000 to the target group for port 3000.
+See [action.yml](action.yml)
 
 ## Terminating Environments
 
 If the action finds that the staging environment is in an unhealthy state, it will be terminated and recreated, unless `terminate_unhealthy_environment` is set to false. The environment should be configured to recreate any associated resources that are deleted during environment termination, so that they are available when it is recreated.
+
+The action will also enable or disable termination protection on the target environment's underlying CloudFormation stack, if `enable_termination_protection` or `disable_termination_protection` are set to true, respectively.
 
 ## Usage
 
