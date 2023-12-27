@@ -37,19 +37,25 @@ inputs:
   production_cname:
     description: "CNAME prefix for the domain that serves production traffic."
     required: true
+  promote:
+    description: "Whether to promote the target environment to production by swapping the CNAMEs of the blue and green environments."
+    default: "false"
   source_bundle:
     description: "Path to the source bundle to deploy. If not specified, the sample application will be used."
   staging_cname:
     description: "CNAME prefix for the staging environment."
     required: true
-  swap_cnames:
-    description: "Whether to swap the CNAMEs of the blue and green environments."
-    default: "false"
   template_name:
     description: "Name of an Elastic Beanstalk configuration template to use when creating a new environment."
   terminate_unhealthy_environment:
     description: "Whether to terminate an unhealthy target environment. If set to false, the action will exit with an error when the target environment is unhealthy."
     default: "true"
+  use_default_option_settings:
+    description: "Whether to use default option settings when creating a new environment."
+    default: "true"
+  use_shared_alb:
+    description: "Whether to use a shared Application Load Balancer when creating a new environment."
+    default: "false"
   version_description:
     description: "Description to use for the new application version."
   version_label:
@@ -63,12 +69,6 @@ inputs:
   wait_for_termination:
     description: "Whether to wait for an environment to be terminated."
     default: "true"
-  use_default_option_settings:
-    description: "Whether to use default option settings when creating a new environment."
-    default: "true"
-  use_shared_alb:
-    description: "Whether to use a shared Application Load Balancer when creating a new environment."
-    default: "false"
 outputs:
   target_env_cname:
     description: "CNAME of the target environment."

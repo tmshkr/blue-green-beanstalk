@@ -38,7 +38,7 @@ export async function main(inputs: ActionInputs) {
       await enableTerminationProtection(targetEnv);
     }
 
-    if (inputs.swapCNAMEs) {
+    if (inputs.promote) {
       console.log(
         `Promoting environment ${targetEnv.EnvironmentName} to production...`
       );
