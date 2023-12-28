@@ -15,8 +15,11 @@ inputs:
   blue_env:
     description: "Name of the blue environment."
     required: true
+  create_environment:
+    description: "Whether to create a new environment during deployment if the target environment doesn't exist."
+    default: "true"
   deploy:
-    description: "Whether to deploy the new application version to the target environment."
+    description: "Whether to deploy to the target environment."
     default: "false"
   disable_termination_protection:
     description: "Whether to disable termination protection for the target environment's CloudFormation stack before attempting to terminate it."
@@ -28,12 +31,9 @@ inputs:
     description: "Name of the green environment."
     required: true
   option_settings:
-    description: "Path to a JSON file consisting of an array of option settings to use when creating a new environment. When using custom option settings, the default option settings will be ignored, but the SharedLoadBalancer will still be provided when use_shared_alb is set to true."
+    description: "Path to a JSON file consisting of an array of option settings to use when creating a new environment."
   platform_branch_name:
     description: "Name of the platform branch to use. When creating a new environment, it will be launched with the latest version of the specified platform branch. To see the list of available platform branches, run the `aws elasticbeanstalk list-platform-branches` command."
-  prep:
-    description: "When prep is set to true, the action will exit if the target environment is healthy, or create a new environment if it is not healthy. This is useful for preparing the target environment, e.g. with the sample application, before deploying a new application version in a later step."
-    default: "false"
   production_cname:
     description: "CNAME prefix for the domain that serves production traffic."
     required: true
@@ -50,12 +50,12 @@ inputs:
   terminate_unhealthy_environment:
     description: "Whether to terminate an unhealthy target environment. If set to false, the action will exit with an error when the target environment is unhealthy."
     default: "true"
+  update_environment:
+    description: "Whether to update an existing environment during deployment."
+    default: "true"
   use_default_option_settings:
     description: "Whether to use default option settings when creating a new environment."
     default: "true"
-  use_shared_alb:
-    description: "Whether to use a shared Application Load Balancer when creating a new environment."
-    default: "false"
   version_description:
     description: "Description to use for the new application version."
   version_label:
