@@ -8,6 +8,7 @@ import { ActionInputs } from "./inputs";
 import { getEnvironments } from "./getEnvironments";
 import { terminateEnvironment } from "./terminateEnvironment";
 import { setDescribeEventsInterval } from "./setDescribeEventsInterval";
+import { disableTerminationProtection } from "./updateTerminationProtection";
 
 export async function getTargetEnv(
   inputs: ActionInputs
@@ -48,6 +49,10 @@ export async function getTargetEnv(
       throw new Error(
         "Target environment is not ready and wait_for_environment is set to false."
       );
+  }
+
+  if (inputs.disableTerminationProtection) {
+    await disableTerminationProtection(targetEnv);
   }
 
   switch (targetEnv.Health) {
