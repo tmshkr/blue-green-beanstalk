@@ -10,6 +10,9 @@ export function getInputs() {
       process.env.AWS_REGION ||
       process.env.AWS_DEFAULT_REGION,
     blueEnv: core.getInput("blue_env", { required: true }),
+    createEnvironment: core.getBooleanInput("create_environment", {
+      required: true,
+    }),
     deploy: core.getBooleanInput("deploy", { required: true }),
     disableTerminationProtection: core.getBooleanInput(
       "disable_termination_protection"
@@ -22,7 +25,6 @@ export function getInputs() {
       ? JSON.parse(fs.readFileSync(core.getInput("option_settings")))
       : undefined,
     platformBranchName: core.getInput("platform_branch_name"),
-    prep: core.getBooleanInput("prep"),
     productionCNAME: core.getInput("production_cname", { required: true }),
     promote: core.getBooleanInput("promote", { required: true }),
     sourceBundle: core.getInput("source_bundle") || undefined,
@@ -32,6 +34,9 @@ export function getInputs() {
       "terminate_unhealthy_environment",
       { required: true }
     ),
+    updateEnvironment: core.getBooleanInput("update_environment", {
+      required: true,
+    }),
     versionDescription: core.getInput("version_description") || undefined,
     versionLabel: core.getInput("version_label") || undefined,
     waitForDeployment: core.getBooleanInput("wait_for_deployment", {
@@ -49,9 +54,6 @@ export function getInputs() {
         required: true,
       }
     ),
-    useSharedALB: core.getBooleanInput("use_shared_alb", {
-      required: true,
-    }),
   };
 
   try {

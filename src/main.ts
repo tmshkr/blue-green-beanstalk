@@ -8,7 +8,7 @@ import { ebClient } from "./clients";
 import { getApplicationVersion } from "./getApplicationVersion";
 import { getTargetEnv } from "./getTargetEnv";
 import { createEnvironment } from "./createEnvironment";
-import { deploy } from "./deploy";
+import { updateEnvironment } from "./updateEnvironment";
 import { swapCNAMES } from "./swapCNAMES";
 import { ActionInputs } from "./inputs";
 import { enableTerminationProtection } from "./updateTerminationProtection";
@@ -18,20 +18,17 @@ export async function main(inputs: ActionInputs) {
     const applicationVersion = await getApplicationVersion(inputs);
     let targetEnv = await getTargetEnv(inputs);
 
-    if (inputs.prep) {
-      if (!targetEnv) {
+    if (inputs.deploy) {
+      if (targetEnv && inputs.updateEnvironment) {
+        await updateEnvironment(inputs, targetEnv, applicationVersion);
+      } else if (!targetEnv && inputs.createEnvironment) {
         targetEnv = await createEnvironment(inputs, applicationVersion);
       }
-      await setOutputs(targetEnv);
-      return;
     }
 
-    if (inputs.deploy) {
-      if (targetEnv) {
-        await deploy(inputs, targetEnv, applicationVersion);
-      } else {
-        targetEnv = await createEnvironment(inputs, applicationVersion);
-      }
+    if (!targetEnv) {
+      console.log("No target environment. Exiting...");
+      return;
     }
 
     if (inputs.enableTerminationProtection) {
@@ -42,9 +39,7 @@ export async function main(inputs: ActionInputs) {
       console.log(
         `Promoting environment ${targetEnv.EnvironmentName} to production...`
       );
-      if (!targetEnv) {
-        throw new Error("No target environment to promote");
-      }
+
       await ebClient
         .send(
           new DescribeEnvironmentsCommand({
