@@ -7,8 +7,8 @@ import {
   ModifyRuleCommand,
   Rule,
 } from "@aws-sdk/client-elastic-load-balancing-v2";
-import { ebClient, elbv2Client } from "./src/clients";
-import { ActionInputs } from "./src/inputs";
+import { ebClient, elbv2Client } from "./clients";
+import { ActionInputs } from "./inputs";
 
 export async function removeTargetGroups() {}
 
