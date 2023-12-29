@@ -12,6 +12,7 @@ import { updateEnvironment } from "./updateEnvironment";
 import { swapCNAMES } from "./swapCNAMES";
 import { ActionInputs } from "./inputs";
 import { enableTerminationProtection } from "./updateTerminationProtection";
+import { updateTargetGroups } from "./updateListenerRules";
 
 export async function main(inputs: ActionInputs) {
   try {
@@ -26,16 +27,21 @@ export async function main(inputs: ActionInputs) {
       }
     }
 
-    if (!targetEnv) {
-      console.log("No target environment. Exiting...");
-      return;
-    }
-
     if (inputs.enableTerminationProtection) {
+      if (!targetEnv) {
+        throw new Error(
+          "No target environment found. Cannot enable termination protection."
+        );
+      }
       await enableTerminationProtection(targetEnv);
     }
 
     if (inputs.promote) {
+      if (!targetEnv) {
+        throw new Error(
+          "No target environment found. Cannot promote to production."
+        );
+      }
       console.log(
         `Promoting environment ${targetEnv.EnvironmentName} to production...`
       );
@@ -60,6 +66,9 @@ export async function main(inputs: ActionInputs) {
         });
 
       await swapCNAMES(inputs);
+      if (inputs.updateListenerRules) {
+        await updateTargetGroups(inputs);
+      }
     }
 
     await setOutputs(targetEnv);
