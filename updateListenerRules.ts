@@ -42,30 +42,40 @@ export async function updateTargetGroups(inputs: ActionInputs) {
   for (const { Tags, ResourceArn } of TagDescriptions) {
     for (const tag of Tags) {
       if (tag.Key === "elasticbeanstalk:cname") {
-        if (tag.Value === inputs.productionCNAME) {
-          await elbv2Client.send(
-            new ModifyRuleCommand({
-              RuleArn: ResourceArn,
-              Actions: [
-                {
-                  Type: "forward",
-                  TargetGroupArn: prodTgArn,
-                },
-              ],
-            })
-          );
-        } else if (tag.Value === inputs.stagingCNAME) {
-          await elbv2Client.send(
-            new ModifyRuleCommand({
-              RuleArn: ResourceArn,
-              Actions: [
-                {
-                  Type: "forward",
-                  TargetGroupArn: stagingTgArn,
-                },
-              ],
-            })
-          );
+        switch (tag.Value) {
+          case inputs.productionCNAME:
+            if (prodTgArn) {
+              await elbv2Client.send(
+                new ModifyRuleCommand({
+                  RuleArn: ResourceArn,
+                  Actions: [
+                    {
+                      Type: "forward",
+                      TargetGroupArn: prodTgArn,
+                    },
+                  ],
+                })
+              );
+            }
+            break;
+          case inputs.stagingCNAME:
+            if (stagingTgArn) {
+              await elbv2Client.send(
+                new ModifyRuleCommand({
+                  RuleArn: ResourceArn,
+                  Actions: [
+                    {
+                      Type: "forward",
+                      TargetGroupArn: stagingTgArn,
+                    },
+                  ],
+                })
+              );
+            }
+            break;
+
+          default:
+            break;
         }
       }
     }
