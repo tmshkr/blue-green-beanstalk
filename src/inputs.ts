@@ -37,6 +37,9 @@ export function getInputs() {
     updateEnvironment: core.getBooleanInput("update_environment", {
       required: true,
     }),
+    updateListenerRules: core.getBooleanInput("update_listener_rules", {
+      required: true,
+    }),
     versionDescription: core.getInput("version_description") || undefined,
     versionLabel: core.getInput("version_label") || undefined,
     waitForDeployment: core.getBooleanInput("wait_for_deployment", {

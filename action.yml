@@ -53,6 +53,9 @@ inputs:
   update_environment:
     description: "Whether to update an existing environment during deployment."
     default: "true"
+  update_listener_rules:
+    description: "When set to true, the action will update any elbv2 listener rule on the environment's load balancer tagged with an `elasticbeanstalk:cname` key equal to the value of the staging or production CNAME prefix, so that it points to the corresponding target group. Additionally, it will remove the target group from the listener before terminating the environment."
+    default: "false"
   use_default_option_settings:
     description: "Whether to use default option settings when creating a new environment."
     default: "true"
