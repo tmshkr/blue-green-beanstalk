@@ -40,9 +40,9 @@ export async function updateTargetGroups(inputs: ActionInputs) {
   );
 
   for (const { Tags, ResourceArn } of TagDescriptions) {
-    for (const tag of Tags) {
-      if (tag.Key === "elasticbeanstalk:cname") {
-        switch (tag.Value) {
+    for (const { Key, Value } of Tags) {
+      if (Key === "elasticbeanstalk:cname") {
+        switch (Value) {
           case inputs.productionCNAME:
             if (prodTgArn) {
               await elbv2Client.send(
