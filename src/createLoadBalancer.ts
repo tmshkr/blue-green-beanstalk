@@ -4,7 +4,7 @@ import {
   CreateListenerCommand,
   waitUntilLoadBalancerAvailable,
 } from "@aws-sdk/client-elastic-load-balancing-v2";
-import { elbClient, ec2Client } from "./clients";
+import { elbv2Client, ec2Client } from "./clients";
 import { ActionInputs } from "./inputs";
 
 export async function createLoadBalancer(inputs: ActionInputs) {
@@ -25,7 +25,7 @@ export async function createLoadBalancer(inputs: ActionInputs) {
     throw new Error("Cannot create load balancer. No default subnets found.");
   }
 
-  const alb = await elbClient
+  const alb = await elbv2Client
     .send(
       new CreateLoadBalancerCommand({
         Name: inputs.appName.slice(0, 32),
@@ -34,7 +34,7 @@ export async function createLoadBalancer(inputs: ActionInputs) {
     )
     .then(({ LoadBalancers }) => LoadBalancers[0]);
 
-  await elbClient.send(
+  await elbv2Client.send(
     new CreateListenerCommand({
       LoadBalancerArn: alb.LoadBalancerArn,
       Protocol: "HTTP",
@@ -56,7 +56,7 @@ export async function createLoadBalancer(inputs: ActionInputs) {
   console.log(`Waiting for it to become available...`);
 
   await waitUntilLoadBalancerAvailable(
-    { client: elbClient, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
+    { client: elbv2Client, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
     { LoadBalancerArns: [alb.LoadBalancerArn] }
   );
 

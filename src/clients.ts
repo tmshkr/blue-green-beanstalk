@@ -33,5 +33,5 @@ export const asClient = new AutoScalingClient(awsConfig);
 export const cfnClient = new CloudFormationClient(awsConfig);
 export const ebClient = new ElasticBeanstalkClient(awsConfig);
 export const ec2Client = new EC2Client(awsConfig);
-export const elbClient = new ElasticLoadBalancingV2Client(awsConfig);
+export const elbv2Client = new ElasticLoadBalancingV2Client(awsConfig);
 export const s3Client = new S3Client(awsConfig);
