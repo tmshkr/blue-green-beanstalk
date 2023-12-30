@@ -91,7 +91,8 @@ export async function updateTargetGroups(inputs: ActionInputs) {
       ({ Key }) => Key === "bluegreenbeanstalk:forward_cname"
     )?.Value;
 
-    if (!cname) continue;
+    if (![inputs.stagingCNAME, inputs.productionCNAME].includes(cname))
+      continue;
 
     const port =
       Tags.find(({ Key }) => Key === "bluegreenbeanstalk:forward_port")
@@ -162,8 +163,7 @@ async function findTargetGroupArns(inputs: ActionInputs) {
         for (const { TargetGroupArn, Port } of TargetGroups) {
           if (result[CNAME][Port]) {
             throw new Error(
-              `Duplicate target groups for port ${Port} on ${CNAME}:\n${result[CNAME][Port]}\n${TargetGroupArn}
-              `
+              `Duplicate target groups for port ${Port} on ${CNAME}`
             );
           }
           result[CNAME][Port] = TargetGroupArn;
