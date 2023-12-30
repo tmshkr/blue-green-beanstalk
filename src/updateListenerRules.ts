@@ -10,27 +10,42 @@ import {
 import { ebClient, elbv2Client } from "./clients";
 import { ActionInputs } from "./inputs";
 
-export async function removeTargetGroups() {}
+export async function removeTargetGroups(inputs: ActionInputs) {
+  const rules = await getRules(inputs);
+
+  const { TagDescriptions } = await elbv2Client.send(
+    new DescribeTagsCommand({
+      ResourceArns: rules.map((rule) => rule.RuleArn),
+    })
+  );
+
+  for (const { Tags, ResourceArn } of TagDescriptions) {
+    for (const { Key, Value } of Tags) {
+      if (Key === "elasticbeanstalk:cname") {
+        if (Value == inputs.stagingCNAME) {
+          await elbv2Client.send(
+            new ModifyRuleCommand({
+              RuleArn: ResourceArn,
+              Actions: [
+                {
+                  Type: "fixed-response",
+                  FixedResponseConfig: {
+                    ContentType: "text/plain",
+                    MessageBody: ResourceArn,
+                    StatusCode: "200",
+                  },
+                },
+              ],
+            })
+          );
+        }
+      }
+    }
+  }
+}
 
 export async function updateTargetGroups(inputs: ActionInputs) {
-  const loadBalancerArns = await getLoadBalancers(inputs);
-  const listeners: Listener[] = [];
-  for (const loadBalancerArn of loadBalancerArns) {
-    await elbv2Client
-      .send(
-        new DescribeListenersCommand({
-          LoadBalancerArn: loadBalancerArn,
-        })
-      )
-      .then(({ Listeners }) => listeners.push(...Listeners));
-  }
-  const rules: Rule[] = [];
-  for (const listener of listeners) {
-    await elbv2Client
-      .send(new DescribeRulesCommand({ ListenerArn: listener.ListenerArn }))
-      .then(({ Rules }) => rules.push(...Rules));
-  }
-
+  const rules = await getRules(inputs);
   const { prodTgArn, stagingTgArn } = findTargetGroupArns(inputs, rules);
 
   const { TagDescriptions } = await elbv2Client.send(
@@ -114,7 +129,7 @@ function findTargetGroupArns(inputs: ActionInputs, rules: Rule[]) {
   return { prodTgArn, stagingTgArn };
 }
 
-async function getLoadBalancers(inputs: ActionInputs) {
+async function getRules(inputs: ActionInputs) {
   const loadBalancerArns = new Set<string>();
   const getLoadBalancer = (envName: string) =>
     ebClient
@@ -132,5 +147,23 @@ async function getLoadBalancers(inputs: ActionInputs) {
     getLoadBalancer(inputs.blueEnv),
     getLoadBalancer(inputs.greenEnv),
   ]);
-  return Array.from(loadBalancerArns);
+
+  const listeners: Listener[] = [];
+  for (const loadBalancerArn of loadBalancerArns) {
+    await elbv2Client
+      .send(
+        new DescribeListenersCommand({
+          LoadBalancerArn: loadBalancerArn,
+        })
+      )
+      .then(({ Listeners }) => listeners.push(...Listeners));
+  }
+  const rules: Rule[] = [];
+  for (const listener of listeners) {
+    await elbv2Client
+      .send(new DescribeRulesCommand({ ListenerArn: listener.ListenerArn }))
+      .then(({ Rules }) => rules.push(...Rules));
+  }
+
+  return rules;
 }
