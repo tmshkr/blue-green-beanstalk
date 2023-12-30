@@ -146,7 +146,7 @@ async function getRules(inputs: ActionInputs) {
         })
       )
       .then(({ EnvironmentResources }) => {
-        loadBalancerArns.add(EnvironmentResources.LoadBalancers[0].Name);
+        loadBalancerArns.add(EnvironmentResources.LoadBalancers[0]?.Name);
       })
       .catch(console.log);
 
@@ -173,13 +173,12 @@ async function getRules(inputs: ActionInputs) {
   }
 
   interface RulesByArn {
-    [key: string]: Rule;
+    [arn: string]: Rule;
   }
   const rulesByArn: RulesByArn = {};
-  rules.reduce((acc, rule) => {
-    acc[rule.RuleArn] = rule;
-    return acc;
-  }, rulesByArn);
+  for (const rule of rules) {
+    rulesByArn[rule.RuleArn] = rule;
+  }
 
   return rulesByArn;
 }
