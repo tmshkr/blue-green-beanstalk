@@ -1,5 +1,6 @@
 import { DescribeEnvironmentResourcesCommand } from "@aws-sdk/client-elastic-beanstalk";
 import {
+  Action,
   DescribeListenersCommand,
   DescribeRulesCommand,
   DescribeTagsCommand,
@@ -15,7 +16,7 @@ export async function removeTargetGroups(inputs: ActionInputs) {
 
   const { TagDescriptions } = await elbv2Client.send(
     new DescribeTagsCommand({
-      ResourceArns: rules.map((rule) => rule.RuleArn),
+      ResourceArns: Object.keys(rules),
     })
   );
 
@@ -31,13 +32,14 @@ export async function removeTargetGroups(inputs: ActionInputs) {
                   Type: "fixed-response",
                   FixedResponseConfig: {
                     ContentType: "text/plain",
-                    MessageBody: ResourceArn,
-                    StatusCode: "200",
+                    MessageBody: "Environment not available",
+                    StatusCode: "404",
                   },
                 },
               ],
             })
           );
+          console.log(`Updated ${ResourceArn}`);
         }
       }
     }
@@ -46,15 +48,28 @@ export async function removeTargetGroups(inputs: ActionInputs) {
 
 export async function updateTargetGroups(inputs: ActionInputs) {
   const rules = await getRules(inputs);
-  const { prodTgArn, stagingTgArn } = findTargetGroupArns(inputs, rules);
+  const { prodTgArn, stagingTgArn } = findTargetGroupArns(
+    inputs,
+    Object.values(rules)
+  );
 
   const { TagDescriptions } = await elbv2Client.send(
     new DescribeTagsCommand({
-      ResourceArns: rules.map((rule) => rule.RuleArn),
+      ResourceArns: Object.keys(rules),
     })
   );
 
+  const handleActions = (actions: Action[], tgArn) => {
+    const idx = actions.length - 1;
+    actions[idx] = {
+      Type: "forward",
+      TargetGroupArn: tgArn,
+    };
+    return actions;
+  };
+
   for (const { Tags, ResourceArn } of TagDescriptions) {
+    const rule = rules[ResourceArn];
     for (const { Key, Value } of Tags) {
       if (Key === "elasticbeanstalk:cname") {
         switch (Value) {
@@ -63,14 +78,10 @@ export async function updateTargetGroups(inputs: ActionInputs) {
               await elbv2Client.send(
                 new ModifyRuleCommand({
                   RuleArn: ResourceArn,
-                  Actions: [
-                    {
-                      Type: "forward",
-                      TargetGroupArn: prodTgArn,
-                    },
-                  ],
+                  Actions: handleActions(rule.Actions, prodTgArn),
                 })
               );
+              console.log(`Updated ${ResourceArn}`);
             }
             break;
           case inputs.stagingCNAME:
@@ -78,14 +89,10 @@ export async function updateTargetGroups(inputs: ActionInputs) {
               await elbv2Client.send(
                 new ModifyRuleCommand({
                   RuleArn: ResourceArn,
-                  Actions: [
-                    {
-                      Type: "forward",
-                      TargetGroupArn: stagingTgArn,
-                    },
-                  ],
+                  Actions: handleActions(rule.Actions, stagingTgArn),
                 })
               );
+              console.log(`Updated ${ResourceArn}`);
             }
             break;
 
@@ -165,5 +172,14 @@ async function getRules(inputs: ActionInputs) {
       .then(({ Rules }) => rules.push(...Rules));
   }
 
-  return rules;
+  interface RulesByArn {
+    [key: string]: Rule;
+  }
+  const rulesByArn: RulesByArn = {};
+  rules.reduce((acc, rule) => {
+    acc[rule.RuleArn] = rule;
+    return acc;
+  }, rulesByArn);
+
+  return rulesByArn;
 }
