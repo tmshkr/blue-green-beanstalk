@@ -1,5 +1,6 @@
 import { DescribeAutoScalingGroupsCommand } from "@aws-sdk/client-auto-scaling";
 import {
+  DescribeConfigurationSettingsCommand,
   DescribeEnvironmentResourcesCommand,
   EnvironmentDescription,
 } from "@aws-sdk/client-elastic-beanstalk";
@@ -16,6 +17,10 @@ import {
 import { asClient, ebClient, elbv2Client } from "./clients";
 import { ActionInputs } from "./inputs";
 import { getEnvironments } from "./getEnvironments";
+
+interface TargetGroupARNsByPortByCname {
+  [cname: string]: { [port: number]: string };
+}
 
 export async function removeTargetGroups(inputs: ActionInputs) {
   const rules = await getRules(inputs);
@@ -55,9 +60,83 @@ export async function removeTargetGroups(inputs: ActionInputs) {
   }
 }
 
+async function mapRulePortToTargetGroupArn(
+  inputs: ActionInputs,
+  tgPortToTargetGroupArn: TargetGroupARNsByPortByCname
+) {
+  const rulePortToTargetGroupArn: TargetGroupARNsByPortByCname = {};
+  const getConfigSettings = async (
+    inputs: ActionInputs,
+    env: EnvironmentDescription
+  ) => {
+    await ebClient
+      .send(
+        new DescribeConfigurationSettingsCommand({
+          ApplicationName: inputs.appName,
+          EnvironmentName: env.EnvironmentName,
+        })
+      )
+      .then(({ ConfigurationSettings }) => {
+        const CNAME = getCnamePrefix(inputs, env);
+        const mapRuleToProcess = {};
+        const mapProcessToPort = {};
+        for (const { OptionSettings } of ConfigurationSettings) {
+          for (const { Namespace, OptionName, Value } of OptionSettings) {
+            if (
+              Namespace.startsWith(
+                "aws:elasticbeanstalk:environment:process:"
+              ) &&
+              OptionName === "Port"
+            ) {
+              const process_name = Namespace.split(":").pop();
+              mapProcessToPort[process_name] = Value;
+            }
+            if (
+              Namespace.startsWith("aws:elbv2:listenerrule:") &&
+              OptionName === "Process"
+            ) {
+              const process_name = Value;
+              const rule = Namespace.split(":").pop();
+              mapRuleToProcess[rule] = process_name;
+            }
+          }
+        }
+        for (const { OptionSettings } of ConfigurationSettings) {
+          for (const { Namespace, OptionName, Value } of OptionSettings) {
+            if (
+              Namespace.startsWith("aws:elbv2:listener:") &&
+              OptionName === "DefaultProcess"
+            ) {
+              const process_name = Value;
+              const listenerPort = Namespace.split(":").pop();
+              const tgPort = mapProcessToPort[process_name];
+              const tg = tgPortToTargetGroupArn[CNAME][tgPort];
+              rulePortToTargetGroupArn[CNAME][listenerPort] = tg;
+            }
+            if (
+              Namespace.startsWith("aws:elbv2:listener:") &&
+              OptionName === "Rules"
+            ) {
+              const rules = Value.split(",");
+              const listenerPort = Namespace.split(":").pop();
+              for (const rule of rules) {
+                const process_name = mapRuleToProcess[rule];
+                const tgPort = mapProcessToPort[process_name];
+                const tg = tgPortToTargetGroupArn[CNAME][tgPort];
+                rulePortToTargetGroupArn[CNAME][listenerPort] = tg;
+              }
+            }
+          }
+        }
+      });
+  };
+
+  return rulePortToTargetGroupArn;
+}
+
 export async function updateTargetGroups(inputs: ActionInputs) {
   const rules = await getRules(inputs);
-  const targetGroupARNsByPortByCname = await findTargetGroupArns(inputs);
+  const targetGroupARNs = await findTargetGroupArns(inputs);
 
   const { TagDescriptions } = await elbv2Client.send(
     new DescribeTagsCommand({
@@ -78,7 +157,8 @@ export async function updateTargetGroups(inputs: ActionInputs) {
     const rule = rules[ResourceArn];
     for (const { Key, Value: CNAME } of Tags) {
       if (Key === "bluegreenbeanstalk:cname") {
-        const targetGroupArn = targetGroupARNsByPortByCname[CNAME][rule.port];
+        const targetGroupArn =
+          targetGroupARNs[CNAME][rule.port] || targetGroupARNs[CNAME][80];
         if (targetGroupArn) {
           await elbv2Client.send(
             new ModifyRuleCommand({
@@ -95,28 +175,28 @@ export async function updateTargetGroups(inputs: ActionInputs) {
   }
 }
 
+function getCnamePrefix(inputs: ActionInputs, env: EnvironmentDescription) {
+  const prefix = env.CNAME.split(
+    `.${inputs.awsRegion}.elasticbeanstalk.com`
+  )[0];
+  if (![inputs.productionCNAME, inputs.stagingCNAME].includes(prefix)) {
+    throw new Error(`Unexpected CNAME: ${prefix}`);
+  }
+  return prefix;
+}
+
 async function findTargetGroupArns(inputs: ActionInputs) {
   const { prodEnv, stagingEnv } = await getEnvironments(inputs);
-  interface TargetGroupARNsByPortByCname {
-    [cname: string]: { [port: number]: string };
-  }
-
-  const getCnamePrefix = (env: EnvironmentDescription) => {
-    const prefix = env.CNAME.split(
-      `.${inputs.awsRegion}.elasticbeanstalk.com`
-    )[0];
-    if (![inputs.productionCNAME, inputs.stagingCNAME].includes(prefix)) {
-      throw new Error(`Unexpected CNAME: ${prefix}`);
-    }
-    return prefix;
-  };
 
   const targetGroupARNsByPortByCname: TargetGroupARNsByPortByCname = {
-    [getCnamePrefix(prodEnv)]: {},
-    [getCnamePrefix(stagingEnv)]: {},
+    [getCnamePrefix(inputs, prodEnv)]: {},
+    [getCnamePrefix(inputs, stagingEnv)]: {},
   };
 
-  const getTargetGroupArns = async (env: EnvironmentDescription) => {
+  const getTargetGroupArns = async (
+    inputs: ActionInputs,
+    env: EnvironmentDescription
+  ) => {
     const { EnvironmentResources } = await ebClient.send(
       new DescribeEnvironmentResourcesCommand({
         EnvironmentName: env.EnvironmentName,
@@ -138,7 +218,7 @@ async function findTargetGroupArns(inputs: ActionInputs) {
       }
     }
 
-    const CNAME = getCnamePrefix(env);
+    const CNAME = getCnamePrefix(inputs, env);
     await elbv2Client
       .send(
         new DescribeTargetGroupsCommand({
@@ -156,8 +236,8 @@ async function findTargetGroupArns(inputs: ActionInputs) {
   };
 
   await Promise.all([
-    getTargetGroupArns(prodEnv),
-    getTargetGroupArns(stagingEnv),
+    getTargetGroupArns(inputs, prodEnv),
+    getTargetGroupArns(inputs, stagingEnv),
   ]);
 
   return targetGroupARNsByPortByCname;
