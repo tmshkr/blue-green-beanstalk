@@ -98,17 +98,17 @@ export async function updateTargetGroups(inputs: ActionInputs) {
         ?.Value || 80;
 
     const targetGroupArn = targetGroupARNs[cname][port];
-    if (targetGroupArn) {
-      await elbv2Client.send(
-        new ModifyRuleCommand({
-          RuleArn: ResourceArn,
-          Actions: handleActions(rule.Actions, targetGroupArn),
-        })
-      );
-      console.log(`Updated ${ResourceArn}`);
-    } else {
-      console.warn(`No target group found for ${cname}`);
+    if (!targetGroupArn) {
+      throw new Error(`No target group found for ${cname} from ${ResourceArn}`);
     }
+
+    await elbv2Client.send(
+      new ModifyRuleCommand({
+        RuleArn: ResourceArn,
+        Actions: handleActions(rule.Actions, targetGroupArn),
+      })
+    );
+    console.log(`Updated ${ResourceArn}`);
   }
 }
 
@@ -124,11 +124,7 @@ function getCnamePrefix(inputs: ActionInputs, env: EnvironmentDescription) {
 
 async function findTargetGroupArns(inputs: ActionInputs) {
   const { prodEnv, stagingEnv } = await getEnvironments(inputs);
-
-  const targetGroupARNsByPortByCname: TargetGroupARNsByPortByCname = {
-    [getCnamePrefix(inputs, prodEnv)]: {},
-    [getCnamePrefix(inputs, stagingEnv)]: {},
-  };
+  const result: TargetGroupARNsByPortByCname = {};
 
   const getTargetGroupArns = async (
     inputs: ActionInputs,
@@ -164,10 +160,13 @@ async function findTargetGroupArns(inputs: ActionInputs) {
       )
       .then(({ TargetGroups }) => {
         for (const { TargetGroupArn, Port } of TargetGroups) {
-          if (targetGroupARNsByPortByCname[CNAME][Port]) {
-            console.warn(`Duplicate target group for port ${Port} on ${CNAME}`);
+          if (result[CNAME][Port]) {
+            throw new Error(
+              `Duplicate target groups for port ${Port} on ${CNAME}:\n${result[CNAME][Port]}\n${TargetGroupArn}
+              `
+            );
           }
-          targetGroupARNsByPortByCname[CNAME][Port] = TargetGroupArn;
+          result[CNAME][Port] = TargetGroupArn;
         }
       });
   };
@@ -177,7 +176,7 @@ async function findTargetGroupArns(inputs: ActionInputs) {
     getTargetGroupArns(inputs, stagingEnv),
   ]);
 
-  return targetGroupARNsByPortByCname;
+  return result;
 }
 
 async function getRules(inputs: ActionInputs) {
