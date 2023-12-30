@@ -54,7 +54,7 @@ inputs:
     description: "Whether to update an existing environment during deployment."
     default: "true"
   update_listener_rules:
-    description: "When set to true, the action will update any elbv2 listener rules on the environments' load balancer(s) tagged with a `bluegreenbeanstalk:cname` key, whose value is equal to the staging or production CNAME prefix, so that it forwards to the corresponding target group. It will also remove any target group from the listener before terminating the environment."
+    description: "When set to true, the action will update any elbv2 listener rules on the environments' load balancer(s) tagged with a `bluegreenbeanstalk:forward_cname` key, whose value is equal to the staging or production CNAME prefix, so that it forwards to the corresponding target group. The action will also remove any target group from the listener before terminating the environment. The port of the process may be specified by another tag with the key `bluegreenbeanstalk:forward_port` whose value is the port number. If no such tag is found, the default port of 80 will be used."
     default: "false"
   use_default_option_settings:
     description: "Whether to use default option settings when creating a new environment."

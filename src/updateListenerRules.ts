@@ -1,6 +1,5 @@
 import { DescribeAutoScalingGroupsCommand } from "@aws-sdk/client-auto-scaling";
 import {
-  DescribeConfigurationSettingsCommand,
   DescribeEnvironmentResourcesCommand,
   EnvironmentDescription,
 } from "@aws-sdk/client-elastic-beanstalk";
@@ -20,6 +19,10 @@ import { getEnvironments } from "./getEnvironments";
 
 interface TargetGroupARNsByPortByCname {
   [cname: string]: { [port: number]: string };
+}
+
+interface RulesByArn {
+  [arn: string]: Rule;
 }
 
 export async function removeTargetGroups(inputs: ActionInputs) {
@@ -47,7 +50,10 @@ export async function removeTargetGroups(inputs: ActionInputs) {
   for (const { Tags, ResourceArn } of TagDescriptions) {
     const rule = rules[ResourceArn];
     for (const { Key, Value } of Tags) {
-      if (Key === "bluegreenbeanstalk:cname" && Value === inputs.stagingCNAME) {
+      if (
+        Key === "bluegreenbeanstalk:forward_cname" &&
+        Value === inputs.stagingCNAME
+      ) {
         await elbv2Client.send(
           new ModifyRuleCommand({
             RuleArn: ResourceArn,
@@ -58,80 +64,6 @@ export async function removeTargetGroups(inputs: ActionInputs) {
       }
     }
   }
-}
-
-async function mapRulePortToTargetGroupArn(
-  inputs: ActionInputs,
-  tgPortToTargetGroupArn: TargetGroupARNsByPortByCname
-) {
-  const rulePortToTargetGroupArn: TargetGroupARNsByPortByCname = {};
-  const getConfigSettings = async (
-    inputs: ActionInputs,
-    env: EnvironmentDescription
-  ) => {
-    await ebClient
-      .send(
-        new DescribeConfigurationSettingsCommand({
-          ApplicationName: inputs.appName,
-          EnvironmentName: env.EnvironmentName,
-        })
-      )
-      .then(({ ConfigurationSettings }) => {
-        const CNAME = getCnamePrefix(inputs, env);
-        const mapRuleToProcess = {};
-        const mapProcessToPort = {};
-        for (const { OptionSettings } of ConfigurationSettings) {
-          for (const { Namespace, OptionName, Value } of OptionSettings) {
-            if (
-              Namespace.startsWith(
-                "aws:elasticbeanstalk:environment:process:"
-              ) &&
-              OptionName === "Port"
-            ) {
-              const process_name = Namespace.split(":").pop();
-              mapProcessToPort[process_name] = Value;
-            }
-            if (
-              Namespace.startsWith("aws:elbv2:listenerrule:") &&
-              OptionName === "Process"
-            ) {
-              const process_name = Value;
-              const rule = Namespace.split(":").pop();
-              mapRuleToProcess[rule] = process_name;
-            }
-          }
-        }
-        for (const { OptionSettings } of ConfigurationSettings) {
-          for (const { Namespace, OptionName, Value } of OptionSettings) {
-            if (
-              Namespace.startsWith("aws:elbv2:listener:") &&
-              OptionName === "DefaultProcess"
-            ) {
-              const process_name = Value;
-              const listenerPort = Namespace.split(":").pop();
-              const tgPort = mapProcessToPort[process_name];
-              const tg = tgPortToTargetGroupArn[CNAME][tgPort];
-              rulePortToTargetGroupArn[CNAME][listenerPort] = tg;
-            }
-            if (
-              Namespace.startsWith("aws:elbv2:listener:") &&
-              OptionName === "Rules"
-            ) {
-              const rules = Value.split(",");
-              const listenerPort = Namespace.split(":").pop();
-              for (const rule of rules) {
-                const process_name = mapRuleToProcess[rule];
-                const tgPort = mapProcessToPort[process_name];
-                const tg = tgPortToTargetGroupArn[CNAME][tgPort];
-                rulePortToTargetGroupArn[CNAME][listenerPort] = tg;
-              }
-            }
-          }
-        }
-      });
-  };
-
-  return rulePortToTargetGroupArn;
 }
 
 export async function updateTargetGroups(inputs: ActionInputs) {
@@ -155,22 +87,27 @@ export async function updateTargetGroups(inputs: ActionInputs) {
 
   for (const { Tags, ResourceArn } of TagDescriptions) {
     const rule = rules[ResourceArn];
-    for (const { Key, Value: CNAME } of Tags) {
-      if (Key === "bluegreenbeanstalk:cname") {
-        const targetGroupArn =
-          targetGroupARNs[CNAME][rule.port] || targetGroupARNs[CNAME][80];
-        if (targetGroupArn) {
-          await elbv2Client.send(
-            new ModifyRuleCommand({
-              RuleArn: ResourceArn,
-              Actions: handleActions(rule.Actions, targetGroupArn),
-            })
-          );
-          console.log(`Updated ${ResourceArn}`);
-        } else {
-          console.warn(`No target group found for ${CNAME}`);
-        }
-      }
+    const cname = Tags.find(
+      ({ Key }) => Key === "bluegreenbeanstalk:forward_cname"
+    )?.Value;
+
+    if (!cname) continue;
+
+    const port =
+      Tags.find(({ Key }) => Key === "bluegreenbeanstalk:forward_port")
+        ?.Value || 80;
+
+    const targetGroupArn = targetGroupARNs[cname][port];
+    if (targetGroupArn) {
+      await elbv2Client.send(
+        new ModifyRuleCommand({
+          RuleArn: ResourceArn,
+          Actions: handleActions(rule.Actions, targetGroupArn),
+        })
+      );
+      console.log(`Updated ${ResourceArn}`);
+    } else {
+      console.warn(`No target group found for ${cname}`);
     }
   }
 }
@@ -274,25 +211,17 @@ async function getRules(inputs: ActionInputs) {
       .then(({ Listeners }) => listeners.push(...Listeners));
   }
 
-  interface RuleWithPort extends Rule {
-    port: number;
-  }
-
-  const rules: RuleWithPort[] = [];
-  for (const { ListenerArn, Port } of listeners) {
+  const rules: Rule[] = [];
+  for (const { ListenerArn } of listeners) {
     await elbv2Client
       .send(new DescribeRulesCommand({ ListenerArn: ListenerArn }))
       .then(({ Rules }) => {
         for (const rule of Rules) {
-          (rule as RuleWithPort).port = Port;
-          rules.push(rule as RuleWithPort);
+          rules.push(rule);
         }
       });
   }
 
-  interface RulesByArn {
-    [arn: string]: RuleWithPort;
-  }
   const rulesByArn: RulesByArn = {};
   for (const rule of rules) {
     rulesByArn[rule.RuleArn] = rule;
