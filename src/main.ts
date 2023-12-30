@@ -66,9 +66,10 @@ export async function main(inputs: ActionInputs) {
         });
 
       await swapCNAMES(inputs);
-      if (inputs.updateListenerRules) {
-        await updateTargetGroups(inputs);
-      }
+    }
+
+    if (inputs.updateListenerRules) {
+      await updateTargetGroups(inputs);
     }
 
     await setOutputs(targetEnv);
