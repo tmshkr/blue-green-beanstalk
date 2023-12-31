@@ -39,7 +39,7 @@ const prodDomain = `${inputs.productionCNAME}.${inputs.awsRegion}.elasticbeansta
 const stagingDomain = `${inputs.stagingCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`;
 
 jest.setTimeout(1000 * 60 * 10);
-describe("swap_cnames strategy", () => {
+describe("main test", () => {
   describe("create the production environment", () => {
     it("should not have any environments", async () => {
       const { Environments } = await ebClient.send(
