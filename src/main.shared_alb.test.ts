@@ -15,7 +15,6 @@ import { createLoadBalancer } from "./test-utils/createLoadBalancer";
 
 import { main } from "./main";
 const { randomBytes } = require("node:crypto");
-import fs from "fs";
 
 jest.setTimeout(1000 * 60 * 10);
 
