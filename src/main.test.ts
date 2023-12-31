@@ -5,7 +5,7 @@ import {
 
 import { ebClient } from "./clients";
 import { main } from "./main";
-import { spinDownEnvironment } from "./utils/spinDownEnvironment";
+import { spinDownEnvironment } from "./test-utils/spinDownEnvironment";
 const { randomBytes } = require("node:crypto");
 
 const key = randomBytes(3).toString("hex");
