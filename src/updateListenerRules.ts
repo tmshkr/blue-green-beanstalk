@@ -107,7 +107,7 @@ export async function updateTargetGroups(inputs: ActionInputs) {
       Tags.find(({ Key }) => Key === "bluegreenbeanstalk:forward_port")
         ?.Value || 80;
 
-    const targetGroupArn = targetGroupARNs[cname][port];
+    const targetGroupArn = targetGroupARNs[cname]?.[port];
     if (targetGroupArn) {
       await elbv2Client.send(
         new ModifyRuleCommand({
