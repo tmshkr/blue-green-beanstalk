@@ -6,6 +6,8 @@ import {
 import { ebClient } from "./clients";
 import { setDescribeEventsInterval } from "./setDescribeEventsInterval";
 import { ActionInputs } from "./inputs";
+import { disableTerminationProtection } from "./updateTerminationProtection";
+import { removeTargetGroups } from "./updateListenerRules";
 
 export async function terminateEnvironment(
   inputs: ActionInputs,
@@ -15,6 +17,14 @@ export async function terminateEnvironment(
     throw new Error(
       "Target environment is unhealthy and terminate_unhealthy_environment is set to false."
     );
+  }
+
+  if (inputs.updateListenerRules) {
+    await removeTargetGroups(inputs);
+  }
+
+  if (inputs.disableTerminationProtection) {
+    await disableTerminationProtection(env);
   }
 
   console.log(
