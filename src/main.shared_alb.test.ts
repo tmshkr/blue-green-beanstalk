@@ -29,7 +29,7 @@ const inputs = {
   disableTerminationProtection: false,
   enableTerminationProtection: false,
   greenEnv: `my-green-env-${key}`,
-  optionSettings: `option-settings-${key}.json`,
+  optionSettings: undefined,
   platformBranchName: "Docker running on 64bit Amazon Linux 2023",
   productionCNAME: `shared-alb-prod-${key}`,
   promote: true,
@@ -59,7 +59,7 @@ beforeAll(async () => {
     prodRule = res.prodRule;
     stagingRule = res.stagingRule;
   });
-  const optionSettings = [
+  inputs.optionSettings = [
     {
       Namespace: "aws:ec2:instances",
       OptionName: "InstanceTypes",
@@ -96,11 +96,6 @@ beforeAll(async () => {
       Value: alb.LoadBalancerArn,
     },
   ];
-
-  fs.writeFileSync(
-    `option-settings-${key}.json`,
-    JSON.stringify(optionSettings)
-  );
 });
 
 describe("updateListenerRules on SharedLoadBalancer", () => {
@@ -139,7 +134,9 @@ describe("updateListenerRules on SharedLoadBalancer", () => {
       );
 
       const prodTargetGroup = Rules.find((rule) =>
-        rule.Conditions[0].Values[0].startsWith(inputs.productionCNAME)
+        rule.Conditions.find(
+          (c) => c.Field === "host-header"
+        ).Values[0].startsWith(inputs.productionCNAME)
       ).Actions[0].TargetGroupArn;
 
       expect(prodTargetGroup).toBeDefined();
@@ -191,10 +188,14 @@ describe("updateListenerRules on SharedLoadBalancer", () => {
       );
 
       const prodTargetGroup = Rules.find((rule) =>
-        rule.Conditions[0].Values[0].startsWith(inputs.productionCNAME)
+        rule.Conditions.find(
+          (c) => c.Field === "host-header"
+        ).Values[0].startsWith(inputs.productionCNAME)
       ).Actions[0].TargetGroupArn;
       const stagingTargetGroup = Rules.find((rule) =>
-        rule.Conditions[0].Values[0].startsWith(inputs.stagingCNAME)
+        rule.Conditions.find(
+          (c) => c.Field === "host-header"
+        ).Values[0].startsWith(inputs.stagingCNAME)
       ).Actions[0].TargetGroupArn;
 
       expect(prodTargetGroup).toBeDefined();
