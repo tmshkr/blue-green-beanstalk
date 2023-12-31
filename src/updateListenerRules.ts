@@ -2,6 +2,7 @@ import { DescribeAutoScalingGroupsCommand } from "@aws-sdk/client-auto-scaling";
 import {
   DescribeEnvironmentResourcesCommand,
   EnvironmentDescription,
+  EnvironmentResourceDescription,
 } from "@aws-sdk/client-elastic-beanstalk";
 import {
   Action,
@@ -26,7 +27,10 @@ interface RulesByArn {
 }
 
 export async function removeTargetGroups(inputs: ActionInputs) {
-  const rules = await getRules(inputs);
+  const { prodEnv, stagingEnv } = await getEnvironments(inputs);
+  const environments = [prodEnv, stagingEnv].filter((env) => !!env);
+  const resources = await getEnvironmentResources(environments);
+  const rules = await getRules(resources);
 
   const { TagDescriptions } = await elbv2Client.send(
     new DescribeTagsCommand({
@@ -67,8 +71,15 @@ export async function removeTargetGroups(inputs: ActionInputs) {
 }
 
 export async function updateTargetGroups(inputs: ActionInputs) {
-  const rules = await getRules(inputs);
-  const targetGroupARNs = await findTargetGroupArns(inputs);
+  const { prodEnv, stagingEnv } = await getEnvironments(inputs);
+  const environments = [prodEnv, stagingEnv].filter((env) => !!env);
+  const resources = await getEnvironmentResources(environments);
+  const rules = await getRules(resources);
+  const targetGroupARNs = await findTargetGroupArns(
+    inputs,
+    environments,
+    resources
+  );
 
   const { TagDescriptions } = await elbv2Client.send(
     new DescribeTagsCommand({
@@ -123,23 +134,21 @@ function getCnamePrefix(inputs: ActionInputs, env: EnvironmentDescription) {
   return prefix;
 }
 
-async function findTargetGroupArns(inputs: ActionInputs) {
-  const { prodEnv, stagingEnv } = await getEnvironments(inputs);
+async function findTargetGroupArns(
+  inputs: ActionInputs,
+  environments: EnvironmentDescription[],
+  resources: EnvironmentResourceDescription[]
+) {
   const result: TargetGroupARNsByPortByCname = {};
 
   const getTargetGroupArns = async (
     inputs: ActionInputs,
-    env: EnvironmentDescription
+    env: EnvironmentDescription,
+    resources: EnvironmentResourceDescription
   ) => {
-    const { EnvironmentResources } = await ebClient.send(
-      new DescribeEnvironmentResourcesCommand({
-        EnvironmentName: env.EnvironmentName,
-      })
-    );
-
     const { AutoScalingGroups } = await asClient.send(
       new DescribeAutoScalingGroupsCommand({
-        AutoScalingGroupNames: EnvironmentResources.AutoScalingGroups.map(
+        AutoScalingGroupNames: resources.AutoScalingGroups.map(
           ({ Name }) => Name
         ),
       })
@@ -171,33 +180,45 @@ async function findTargetGroupArns(inputs: ActionInputs) {
       });
   };
 
-  await Promise.all([
-    getTargetGroupArns(inputs, prodEnv),
-    getTargetGroupArns(inputs, stagingEnv),
-  ]);
+  await Promise.all(
+    resources.map((resourceDescription) =>
+      getTargetGroupArns(
+        inputs,
+        environments.find(
+          (env) => env.EnvironmentName === resourceDescription.EnvironmentName
+        ),
+        resourceDescription
+      )
+    )
+  );
 
   return result;
 }
 
-async function getRules(inputs: ActionInputs) {
-  const loadBalancerArns = new Set<string>();
-  const getLoadBalancer = (envName: string) =>
+async function getEnvironmentResources(environments: EnvironmentDescription[]) {
+  const resources: EnvironmentResourceDescription[] = [];
+  const getEnvironmentResources = (env: EnvironmentDescription) => {
     ebClient
       .send(
         new DescribeEnvironmentResourcesCommand({
-          EnvironmentName: envName,
+          EnvironmentId: env.EnvironmentId,
         })
       )
       .then(({ EnvironmentResources }) => {
-        for (const { Name } of EnvironmentResources.LoadBalancers) {
-          loadBalancerArns.add(Name);
-        }
+        resources.push(EnvironmentResources);
       });
+  };
+  await Promise.all(environments.map((env) => getEnvironmentResources(env)));
+  return resources;
+}
 
-  await Promise.all([
-    getLoadBalancer(inputs.blueEnv),
-    getLoadBalancer(inputs.greenEnv),
-  ]);
+async function getRules(resources: EnvironmentResourceDescription[]) {
+  const loadBalancerArns = new Set<string>();
+  for (const { LoadBalancers } of resources) {
+    for (const { Name } of LoadBalancers) {
+      loadBalancerArns.add(Name);
+    }
+  }
 
   const listeners: Listener[] = [];
   for (const loadBalancerArn of loadBalancerArns) {
