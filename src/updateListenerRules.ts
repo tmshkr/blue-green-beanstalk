@@ -170,7 +170,7 @@ async function findTargetGroupArns(
       )
       .then(({ TargetGroups }) => {
         for (const { TargetGroupArn, Port } of TargetGroups) {
-          if (result[CNAME][Port]) {
+          if (result[CNAME]?.[Port]) {
             throw new Error(
               `Duplicate target groups for port ${Port} on ${CNAME}`
             );
