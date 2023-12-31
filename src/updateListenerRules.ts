@@ -39,8 +39,7 @@ export async function removeTargetGroups(inputs: ActionInputs) {
   );
 
   const handleActions = (actions: Action[]) => {
-    const idx = actions.length - 1;
-    actions[idx] = {
+    actions[actions.length - 1] = {
       Type: "fixed-response",
       FixedResponseConfig: {
         ContentType: "text/plain",
@@ -64,7 +63,7 @@ export async function removeTargetGroups(inputs: ActionInputs) {
             Actions: handleActions(rule.Actions),
           })
         );
-        console.log(`Updated ${ResourceArn}`);
+        console.log(`Updated ${inputs.stagingCNAME} rule: ${ResourceArn}`);
       }
     }
   }
@@ -88,8 +87,7 @@ export async function updateTargetGroups(inputs: ActionInputs) {
   );
 
   const handleActions = (actions: Action[], targetGroupArn) => {
-    const idx = actions.length - 1;
-    actions[idx] = {
+    actions[actions.length - 1] = {
       Type: "forward",
       TargetGroupArn: targetGroupArn,
     };
@@ -110,17 +108,17 @@ export async function updateTargetGroups(inputs: ActionInputs) {
         ?.Value || 80;
 
     const targetGroupArn = targetGroupARNs[cname][port];
-    if (!targetGroupArn) {
-      throw new Error(`No target group found for ${cname} from ${ResourceArn}`);
+    if (targetGroupArn) {
+      await elbv2Client.send(
+        new ModifyRuleCommand({
+          RuleArn: ResourceArn,
+          Actions: handleActions(rule.Actions, targetGroupArn),
+        })
+      );
+      console.log(`Updated ${cname} rule: ${ResourceArn}`);
+    } else {
+      console.warn(`No target group found for ${cname} from ${ResourceArn}`);
     }
-
-    await elbv2Client.send(
-      new ModifyRuleCommand({
-        RuleArn: ResourceArn,
-        Actions: handleActions(rule.Actions, targetGroupArn),
-      })
-    );
-    console.log(`Updated ${ResourceArn}`);
   }
 }
 
@@ -145,7 +143,7 @@ async function findTargetGroupArns(
     result[prefix] = {};
   }
 
-  const getTargetGroupArns = async (
+  const get = async (
     inputs: ActionInputs,
     env: EnvironmentDescription,
     resourceDescription: EnvironmentResourceDescription
@@ -174,11 +172,6 @@ async function findTargetGroupArns(
       )
       .then(({ TargetGroups }) => {
         for (const { TargetGroupArn, Port } of TargetGroups) {
-          if (result[CNAME][Port]) {
-            throw new Error(
-              `Duplicate target groups for port ${Port} on ${CNAME}`
-            );
-          }
           result[CNAME][Port] = TargetGroupArn;
         }
       });
@@ -186,7 +179,7 @@ async function findTargetGroupArns(
 
   await Promise.all(
     resources.map((resourceDescription) =>
-      getTargetGroupArns(
+      get(
         inputs,
         environments.find(
           (env) => env.EnvironmentName === resourceDescription.EnvironmentName
@@ -205,7 +198,7 @@ async function getEnvironmentResources(environments: EnvironmentDescription[]) {
   }
 
   const resources: EnvironmentResourceDescription[] = [];
-  const getEnvironmentResources = async (env: EnvironmentDescription) => {
+  const get = async (env: EnvironmentDescription) => {
     await ebClient
       .send(
         new DescribeEnvironmentResourcesCommand({
@@ -217,7 +210,7 @@ async function getEnvironmentResources(environments: EnvironmentDescription[]) {
       });
   };
 
-  await Promise.all(environments.map((env) => getEnvironmentResources(env)));
+  await Promise.all(environments.map((env) => get(env)));
 
   if (resources.length === 0) {
     throw new Error("No resources found");
