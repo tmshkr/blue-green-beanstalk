@@ -140,6 +140,10 @@ async function findTargetGroupArns(
   resources: EnvironmentResourceDescription[]
 ) {
   const result: TargetGroupARNsByPortByCname = {};
+  for (const env of environments) {
+    const prefix = getCnamePrefix(inputs, env);
+    result[prefix] = {};
+  }
 
   const getTargetGroupArns = async (
     inputs: ActionInputs,
@@ -170,7 +174,7 @@ async function findTargetGroupArns(
       )
       .then(({ TargetGroups }) => {
         for (const { TargetGroupArn, Port } of TargetGroups) {
-          if (result[CNAME]?.[Port]) {
+          if (result[CNAME][Port]) {
             throw new Error(
               `Duplicate target groups for port ${Port} on ${CNAME}`
             );
