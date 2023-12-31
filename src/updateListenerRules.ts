@@ -144,11 +144,11 @@ async function findTargetGroupArns(
   const getTargetGroupArns = async (
     inputs: ActionInputs,
     env: EnvironmentDescription,
-    resources: EnvironmentResourceDescription
+    resourceDescription: EnvironmentResourceDescription
   ) => {
     const { AutoScalingGroups } = await asClient.send(
       new DescribeAutoScalingGroupsCommand({
-        AutoScalingGroupNames: resources.AutoScalingGroups.map(
+        AutoScalingGroupNames: resourceDescription.AutoScalingGroups.map(
           ({ Name }) => Name
         ),
       })
@@ -196,9 +196,13 @@ async function findTargetGroupArns(
 }
 
 async function getEnvironmentResources(environments: EnvironmentDescription[]) {
+  if (environments.length === 0) {
+    throw new Error("No environments provided");
+  }
+
   const resources: EnvironmentResourceDescription[] = [];
-  const getEnvironmentResources = (env: EnvironmentDescription) => {
-    ebClient
+  const getEnvironmentResources = async (env: EnvironmentDescription) => {
+    await ebClient
       .send(
         new DescribeEnvironmentResourcesCommand({
           EnvironmentId: env.EnvironmentId,
@@ -208,7 +212,18 @@ async function getEnvironmentResources(environments: EnvironmentDescription[]) {
         resources.push(EnvironmentResources);
       });
   };
+
   await Promise.all(environments.map((env) => getEnvironmentResources(env)));
+
+  if (resources.length === 0) {
+    throw new Error("No resources found");
+  }
+
+  if (resources.length !== environments.length) {
+    throw new Error(
+      `Expected ${environments.length} resources, got ${resources.length}`
+    );
+  }
   return resources;
 }
 
