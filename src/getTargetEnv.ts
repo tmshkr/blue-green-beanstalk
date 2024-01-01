@@ -8,6 +8,7 @@ import { ActionInputs } from "./inputs";
 import { getEnvironments } from "./getEnvironments";
 import { terminateEnvironment } from "./terminateEnvironment";
 import { setDescribeEventsInterval } from "./setDescribeEventsInterval";
+import { setOutputs } from "./main";
 
 export async function getTargetEnv(
   inputs: ActionInputs
@@ -30,10 +31,10 @@ export async function getTargetEnv(
       );
       clearInterval(interval);
       return null;
-    } else
-      throw new Error(
-        "Target environment is terminating and wait_for_termination is set to false."
-      );
+    } else {
+      await setOutputs(targetEnv);
+      process.exit(0);
+    }
   } else if (targetEnv.Status !== "Ready") {
     if (inputs.waitForEnvironment) {
       console.log("Target environment is not ready. Waiting...");
@@ -44,10 +45,10 @@ export async function getTargetEnv(
       );
       clearInterval(interval);
       return getTargetEnv(inputs);
-    } else
-      throw new Error(
-        "Target environment is not ready and wait_for_environment is set to false."
-      );
+    } else {
+      await setOutputs(targetEnv);
+      process.exit(0);
+    }
   }
 
   switch (targetEnv.Health) {
