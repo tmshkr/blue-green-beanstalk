@@ -1,11 +1,17 @@
 import {
-  DescribeEnvironmentResourcesCommand,
   DescribeEnvironmentsCommand,
   TerminateEnvironmentCommand,
 } from "@aws-sdk/client-elastic-beanstalk";
-import { DeleteLoadBalancerCommand } from "@aws-sdk/client-elastic-load-balancing-v2";
-import { ebClient, elbClient } from "./clients";
+import {
+  DeleteLoadBalancerCommand,
+  DescribeRulesCommand,
+  LoadBalancer,
+  Listener,
+  Rule,
+} from "@aws-sdk/client-elastic-load-balancing-v2";
+import { ebClient, elbv2Client } from "./clients";
 import { getEnvironments } from "./getEnvironments";
+import { createLoadBalancer } from "./test-utils/createLoadBalancer";
 
 import { main } from "./main";
 const { randomBytes } = require("node:crypto");
@@ -14,33 +20,84 @@ jest.setTimeout(1000 * 60 * 10);
 
 const key = randomBytes(3).toString("hex");
 const inputs = {
-  appName: `shared-alb-test-${key}`,
+  appName: `shared-alb-${key}`,
   awsRegion: "us-west-2",
   blueEnv: `my-blue-env-${key}`,
+  createEnvironment: true,
   deploy: true,
   disableTerminationProtection: false,
   enableTerminationProtection: false,
   greenEnv: `my-green-env-${key}`,
   optionSettings: undefined,
-  ports: [80],
   platformBranchName: "Docker running on 64bit Amazon Linux 2023",
-  prep: false,
-  productionCNAME: undefined,
-  promote: true,
+  productionCNAME: `shared-alb-prod-${key}`,
   sourceBundle: undefined,
-  stagingCNAME: undefined,
-  strategy: "shared_alb",
+  stagingCNAME: `shared-alb-staging-${key}`,
+  swapCNAMEs: true,
   templateName: undefined,
   terminateUnhealthyEnvironment: true,
+  updateEnvironment: true,
+  updateListenerRules: true,
   versionDescription: undefined,
-  versionLabel: `test-version-${key}`,
+  versionLabel: undefined,
   waitForEnvironment: true,
   waitForDeployment: true,
   waitForTermination: true,
-  useDefaultOptionSettings: true,
+  useDefaultOptionSettings: false,
 };
 
-describe("shared_alb strategy", () => {
+let alb: LoadBalancer;
+let defaultListener: Listener;
+let prodRule: Rule;
+let stagingRule: Rule;
+beforeAll(async () => {
+  // create alb and listener rules
+  await createLoadBalancer(inputs).then((res) => {
+    alb = res.alb;
+    defaultListener = res.defaultListener;
+    prodRule = res.prodRule;
+    stagingRule = res.stagingRule;
+  });
+  inputs.optionSettings = [
+    {
+      Namespace: "aws:ec2:instances",
+      OptionName: "InstanceTypes",
+      Value: "t3.micro,t2.micro",
+    },
+    {
+      Namespace: "aws:elasticbeanstalk:environment",
+      OptionName: "EnvironmentType",
+      Value: "LoadBalanced",
+    },
+    {
+      Namespace: "aws:elasticbeanstalk:environment",
+      OptionName: "LoadBalancerType",
+      Value: "application",
+    },
+    {
+      Namespace: "aws:elasticbeanstalk:environment",
+      OptionName: "LoadBalancerIsShared",
+      Value: "true",
+    },
+    {
+      Namespace: "aws:elasticbeanstalk:environment",
+      OptionName: "ServiceRole",
+      Value: "service-role/aws-elasticbeanstalk-service-role",
+    },
+    {
+      Namespace: "aws:autoscaling:launchconfiguration",
+      OptionName: "IamInstanceProfile",
+      Value: "aws-elasticbeanstalk-ec2-role",
+    },
+    {
+      Namespace: "aws:elbv2:loadbalancer",
+      OptionName: "SharedLoadBalancer",
+      Value: alb.LoadBalancerArn,
+    },
+  ];
+});
+
+describe("updateListenerRules on SharedLoadBalancer", () => {
   describe("create the production environment", () => {
     it("should not have any environments", async () => {
       const { Environments } = await ebClient.send(
@@ -67,10 +124,30 @@ describe("shared_alb strategy", () => {
       expect(stagingEnv).toBeUndefined();
       expect(prodEnv.EnvironmentId).toEqual(Environments[0].EnvironmentId);
     });
+
+    it("should update the tagged listener rule to point to the correct target group", async () => {
+      const { Rules } = await elbv2Client.send(
+        new DescribeRulesCommand({
+          ListenerArn: defaultListener.ListenerArn,
+        })
+      );
+
+      const prodTargetGroup = Rules.find((rule) =>
+        rule.Conditions.find(
+          (c) => c.Field === "host-header"
+        ).Values[0].startsWith(inputs.productionCNAME)
+      ).Actions[0].TargetGroupArn;
+
+      expect(prodTargetGroup).toBeDefined();
+      expect(
+        Rules.find((rule) => rule.RuleArn === prodRule.RuleArn).Actions[0]
+          .TargetGroupArn
+      ).toEqual(prodTargetGroup);
+    });
   });
 
   describe("create the staging envionment", () => {
-    it("should have one environment with an ALB", async () => {
+    it("should have one environment", async () => {
       const { Environments } = await ebClient.send(
         new DescribeEnvironmentsCommand({
           ApplicationName: inputs.appName,
@@ -78,16 +155,6 @@ describe("shared_alb strategy", () => {
         })
       );
       expect(Environments).toHaveLength(1);
-
-      await ebClient
-        .send(
-          new DescribeEnvironmentResourcesCommand({
-            EnvironmentId: Environments[0].EnvironmentId,
-          })
-        )
-        .then(({ EnvironmentResources }) => {
-          expect(EnvironmentResources.LoadBalancers).toHaveLength(1);
-        });
     });
 
     it("should create a new environment and then promote it to production", async () => {
@@ -111,22 +178,44 @@ describe("shared_alb strategy", () => {
       expect(stagingEnv.EnvironmentId).toEqual(oldEnv.EnvironmentId);
       expect(prodEnv.EnvironmentId).toEqual(newEnv.EnvironmentId);
     });
+
+    it("should update both tagged listener rules to point to the correct target groups", async () => {
+      const { Rules } = await elbv2Client.send(
+        new DescribeRulesCommand({
+          ListenerArn: defaultListener.ListenerArn,
+        })
+      );
+
+      const prodTargetGroup = Rules.find((rule) =>
+        rule.Conditions.find(
+          (c) => c.Field === "host-header"
+        ).Values[0].startsWith(inputs.productionCNAME)
+      ).Actions[0].TargetGroupArn;
+      const stagingTargetGroup = Rules.find((rule) =>
+        rule.Conditions.find(
+          (c) => c.Field === "host-header"
+        ).Values[0].startsWith(inputs.stagingCNAME)
+      ).Actions[0].TargetGroupArn;
+
+      expect(prodTargetGroup).toBeDefined();
+      expect(stagingTargetGroup).toBeDefined();
+
+      expect(
+        Rules.find((rule) => rule.RuleArn === prodRule.RuleArn).Actions[0]
+          .TargetGroupArn
+      ).toEqual(prodTargetGroup);
+
+      expect(
+        Rules.find((rule) => rule.RuleArn === stagingRule.RuleArn).Actions[0]
+          .TargetGroupArn
+      ).toEqual(stagingTargetGroup);
+    });
   });
 });
 
 afterAll(async () => {
-  const loadBalancerArn = await ebClient
-    .send(
-      new DescribeEnvironmentResourcesCommand({
-        EnvironmentName: inputs.blueEnv,
-      })
-    )
-    .then(({ EnvironmentResources }) => {
-      expect(EnvironmentResources.LoadBalancers).toHaveLength(1);
-      return EnvironmentResources.LoadBalancers[0].Name;
-    });
-  await elbClient.send(
-    new DeleteLoadBalancerCommand({ LoadBalancerArn: loadBalancerArn })
+  await elbv2Client.send(
+    new DeleteLoadBalancerCommand({ LoadBalancerArn: alb.LoadBalancerArn })
   );
   await ebClient.send(
     new TerminateEnvironmentCommand({ EnvironmentName: inputs.blueEnv })

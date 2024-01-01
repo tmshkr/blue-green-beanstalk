@@ -8,29 +8,22 @@ import { ebClient } from "./clients";
 import { getApplicationVersion } from "./getApplicationVersion";
 import { getTargetEnv } from "./getTargetEnv";
 import { createEnvironment } from "./createEnvironment";
-import { deploy } from "./deploy";
-import { swapCNAMES } from "./swapCNAMES";
-import { ActionInputs, DeploymentStrategy } from "./inputs";
-import { updateListener } from "./updateListener";
+import { updateEnvironment } from "./updateEnvironment";
+import { swapCNAMEs } from "./swapCNAMEs";
+import { ActionInputs } from "./inputs";
 import { enableTerminationProtection } from "./updateTerminationProtection";
+import { updateTargetGroups } from "./updateListenerRules";
 
 export async function main(inputs: ActionInputs) {
+  let targetEnv: EnvironmentDescription | null = null;
   try {
     const applicationVersion = await getApplicationVersion(inputs);
-    let targetEnv = await getTargetEnv(inputs);
-
-    if (inputs.prep) {
-      if (!targetEnv) {
-        targetEnv = await createEnvironment(inputs, applicationVersion);
-      }
-      await setOutputs(targetEnv);
-      return;
-    }
+    targetEnv = await getTargetEnv(inputs);
 
     if (inputs.deploy) {
-      if (targetEnv) {
-        await deploy(inputs, targetEnv, applicationVersion);
-      } else {
+      if (targetEnv && inputs.updateEnvironment) {
+        await updateEnvironment(inputs, targetEnv, applicationVersion);
+      } else if (!targetEnv && inputs.createEnvironment) {
         targetEnv = await createEnvironment(inputs, applicationVersion);
       }
     }
@@ -39,52 +32,27 @@ export async function main(inputs: ActionInputs) {
       await enableTerminationProtection(targetEnv);
     }
 
-    if (inputs.promote) {
-      console.log(
-        `Promoting environment ${targetEnv.EnvironmentName} to production...`
-      );
-      if (!targetEnv) {
-        throw new Error("No target environment to promote");
-      }
-      await ebClient
-        .send(
-          new DescribeEnvironmentsCommand({
-            EnvironmentIds: [targetEnv.EnvironmentId],
-          })
-        )
-        .then(({ Environments }) => {
-          if (Environments[0].Health !== "Green") {
-            throw new Error(
-              `Environment ${targetEnv.EnvironmentName} is not healthy. Aborting promotion.`
-            );
-          }
-          if (Environments[0].Status !== "Ready") {
-            throw new Error(
-              `Environment ${targetEnv.EnvironmentName} is not ready. Aborting promotion.`
-            );
-          }
-        });
-
-      switch (inputs.strategy) {
-        case DeploymentStrategy.SharedALB:
-          await updateListener(inputs, targetEnv);
-          break;
-        case DeploymentStrategy.SwapCNAMEs:
-          await swapCNAMES(inputs);
-          break;
-        default:
-          throw new Error(`Unknown strategy: ${inputs.strategy}`);
-      }
+    if (inputs.swapCNAMEs) {
+      await swapCNAMEs(inputs);
     }
 
-    await setOutputs(targetEnv);
+    if (inputs.updateListenerRules) {
+      await updateTargetGroups(inputs);
+    }
   } catch (err) {
-    core.setFailed(err.message);
-    return Promise.reject(err);
+    if (err.type === "EarlyExit") {
+      console.log(err.message);
+      targetEnv = err.targetEnv;
+    } else {
+      core.setFailed(err.message);
+      return Promise.reject(err);
+    }
   }
+
+  await setOutputs(targetEnv);
 }
 
-async function setOutputs(targetEnv: EnvironmentDescription) {
+export async function setOutputs(targetEnv: EnvironmentDescription) {
   if (targetEnv) {
     targetEnv = await ebClient
       .send(

@@ -7,15 +7,23 @@ import { ebClient } from "./clients";
 import { setDescribeEventsInterval } from "./setDescribeEventsInterval";
 import { ActionInputs } from "./inputs";
 import { disableTerminationProtection } from "./updateTerminationProtection";
+import { removeTargetGroups } from "./updateListenerRules";
 
 export async function terminateEnvironment(
   inputs: ActionInputs,
   env: EnvironmentDescription
 ) {
   if (!inputs.terminateUnhealthyEnvironment) {
-    throw new Error(
-      "Target environment is unhealthy and terminate_unhealthy_environment is set to false."
-    );
+    throw {
+      type: "EarlyExit",
+      message:
+        "Target environment is unhealthy and terminateUnhealthyEnvironment is false. Exiting...",
+      targetEnv: env,
+    };
+  }
+
+  if (inputs.updateListenerRules) {
+    await removeTargetGroups(inputs);
   }
 
   if (inputs.disableTerminationProtection) {
@@ -23,7 +31,7 @@ export async function terminateEnvironment(
   }
 
   console.log(
-    `[${env.EnvironmentName}]: Terminating environment ${env.EnvironmentId}...`
+    `Terminating environment ${env.EnvironmentName} ${env.EnvironmentId}...`
   );
   const startTime = new Date();
   await ebClient.send(
@@ -40,7 +48,10 @@ export async function terminateEnvironment(
     );
     clearInterval(interval);
   } else
-    throw new Error(
-      "Target environment is terminating and wait_for_termination is set to false."
-    );
+    throw {
+      type: "EarlyExit",
+      message:
+        "Target environment is terminating and waitForTermination is false. Exiting...",
+      targetEnv: env,
+    };
 }

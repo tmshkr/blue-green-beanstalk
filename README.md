@@ -7,41 +7,24 @@ The action will create the following resources:
 - An Elastic Beanstalk application, if it doesn't already exist.
 - An Elastic Beanstalk application version, if it doesn't already exist.
 - An Elastic Beanstalk environment, if it doesn't already exist.
-- An Application Load Balancer, if it doesn't already exist, when using the `shared_alb` strategy.
 
-Based on the provided inputs, the action will determine which environment is the target environment, i.e., the environment to which a new application version should be deployed.
+Based on the provided inputs, the action will determine which environment is the target environment, to which a new application version should be deployed.
+
+The action uses the values of the `production_cname` and `staging_cname` inputs to determine which environment is the production or staging environment. Accordingly, the `production_cname` and `staging_cname` inputs should be set to the CNAME prefix of the production and staging environments, respectively.
+
+If neither environment exists, it will create a new environment with the `production_cname` input. If the production environment already exists, the action will target the staging environment, creating it if it doesn't exist.
+
+After deploying, the action will swap the CNAMEs of the staging and production environments, if `swap_cnames` is set to true.
 
 ## Inputs/Outputs
 
 See [action.yml](action.yml)
 
-## Deployment Strategies
-
-This action supports two blue/green deployment strategies: `swap_cnames` and `shared_alb`.
-
-The default strategy is `swap_cnames`.
-
-### `swap_cnames`
-
-The `swap_cnames` strategy uses the value of the `production_cname` input to determine which environment is the production environment.
-
-If neither the blue or green environments exist, it will create a new environment with the `production_cname` input. If the production environment already exists, the action will target the staging environment, creating it if it doesn't exist.
-
-The action will then swap the CNAMEs of the staging and production environments if `promote` is set to true.
-
-### `shared_alb`
-
-The `shared_alb` strategy determines which environment is the production environment by finding the `elasticbeanstalk:environment-id` tag on the associated ALB target groups, which is automatically created by Elastic Beanstalk. If the target groups are not properly tagged, the action will fail.
-
-If neither the blue or green environments exist, it will provision an Application Load Balancer to share between the environments, and then create the production environment. If the production environment already exists, the action will target the staging environment, creating it if it doesn't exist.
-
-When `promote` is set to true, the action will update the default action for each listener on the ALB with a port provided in the `ports` input, so that it forwards to the target group associated with the target environment.
-
-When specifying multiple ports, the action will forward to the target group associated with that port, or else the target group associated with the first port provided, if no target group is associated with the port. For example, if `80,443,3000` is provided as the input, and only ports 80 and 3000 have target groups, the action will forward ports 80 and 443 to the target group for port 80, and port 3000 to the target group for port 3000.
-
 ## Terminating Environments
 
-If the action finds that the staging environment is in an unhealthy state, it will be terminated and recreated, unless `terminate_unhealthy_environment` is set to false. The environment should be configured to recreate any associated resources that are deleted during environment termination, so that they are available when it is recreated.
+If the action finds that the target environment is in an unhealthy state, it will be terminated and recreated, unless `terminate_unhealthy_environment` is set to false. The environment should be configured to recreate any associated resources that are deleted during environment termination, so that they are available when it is recreated.
+
+The action will also enable or disable termination protection on the target environment's underlying CloudFormation stack, if `enable_termination_protection` or `disable_termination_protection` are set to true, respectively.
 
 ## Usage
 
@@ -65,7 +48,7 @@ jobs:
       - name: Generate source bundle
         run: zip -r bundle.zip . -x '*.git*'
       - name: Deploy
-        uses: tmshkr/blue-green-beanstalk@v3
+        uses: tmshkr/blue-green-beanstalk@v4
         with:
           app_name: "test-app"
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -76,9 +59,15 @@ jobs:
           green_env: "my-green-env"
           platform_branch_name: "Docker running on 64bit Amazon Linux 2023"
           production_cname: "blue-green-beanstalk-prod"
-          promote: ${{ github.ref_name == 'main' }}
           source_bundle: "bundle.zip"
+          swap_cnames: ${{ github.ref_name == 'main' }}
           staging_cname: "blue-green-beanstalk-staging"
           version_description: ${{ github.event.head_commit.message }}
           version_label: ${{ github.ref_name }}-${{ github.sha }}
 ```
+
+### Using a Shared Load Balancer
+
+When using a [shared load balancer](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/environments-cfg-alb-shared.html), the `update_listener_rules` input can be set to true, so that the action will update any listener rules that are tagged with a `bluegreenbeanstalk:target_cname` key, whose value is equal to the `production_cname` or `staging_cname` inputs, so that the listener rule points to the same target group as the CNAME.
+
+To forward to a process on a port besides the default port 80, set another tag on the listener rule with a `bluegreenbeanstalk:target_port` key and a value equal to the port number.

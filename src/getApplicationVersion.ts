@@ -1,4 +1,5 @@
 import {
+  CreateApplicationCommand,
   CreateApplicationVersionCommand,
   CreateStorageLocationCommand,
   DescribeApplicationVersionsCommand,
@@ -10,7 +11,19 @@ import { ebClient, s3Client } from "./clients";
 import { ActionInputs } from "./inputs";
 
 export async function getApplicationVersion(inputs: ActionInputs) {
-  if (!inputs.versionLabel) return null;
+  if (!inputs.versionLabel) {
+    await ebClient
+      .send(new CreateApplicationCommand({ ApplicationName: inputs.appName }))
+      .catch((error) => {
+        if (
+          error.name === "InvalidParameterValue" &&
+          error.message.includes("already exists")
+        ) {
+          console.log(`Application ${inputs.appName} already exists.`);
+        } else throw error;
+      });
+    return null;
+  }
 
   const { ApplicationVersions } = await ebClient.send(
     new DescribeApplicationVersionsCommand({

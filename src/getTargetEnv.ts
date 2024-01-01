@@ -31,9 +31,12 @@ export async function getTargetEnv(
       clearInterval(interval);
       return null;
     } else
-      throw new Error(
-        "Target environment is terminating and wait_for_termination is set to false."
-      );
+      throw {
+        type: "EarlyExit",
+        message:
+          "Target environment is terminating and waitForTermination is false. Exiting...",
+        targetEnv,
+      };
   } else if (targetEnv.Status !== "Ready") {
     if (inputs.waitForEnvironment) {
       console.log("Target environment is not ready. Waiting...");
@@ -45,9 +48,12 @@ export async function getTargetEnv(
       clearInterval(interval);
       return getTargetEnv(inputs);
     } else
-      throw new Error(
-        "Target environment is not ready and wait_for_environment is set to false."
-      );
+      throw {
+        type: "EarlyExit",
+        message:
+          "Target environment is not ready and waitForEnvironment is false. Exiting...",
+        targetEnv,
+      };
   }
 
   switch (targetEnv.Health) {
