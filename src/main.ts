@@ -13,6 +13,7 @@ import { swapCNAMEs } from "./swapCNAMEs";
 import { ActionInputs } from "./inputs";
 import { enableTerminationProtection } from "./updateTerminationProtection";
 import { updateTargetGroups } from "./updateListenerRules";
+import { getEnvironments } from "./getEnvironments";
 
 export async function main(inputs: ActionInputs) {
   let targetEnv: EnvironmentDescription | null = null;
@@ -48,19 +49,12 @@ export async function main(inputs: ActionInputs) {
     }
   }
 
-  await setOutputs(targetEnv);
+  await setOutputs(inputs);
 }
 
-export async function setOutputs(targetEnv: EnvironmentDescription) {
-  if (targetEnv) {
-    targetEnv = await ebClient
-      .send(
-        new DescribeEnvironmentsCommand({
-          EnvironmentIds: [targetEnv.EnvironmentId],
-        })
-      )
-      .then(({ Environments }) => Environments[0]);
-  }
+export async function setOutputs(inputs: ActionInputs) {
+  const { prodEnv, stagingEnv } = await getEnvironments(inputs);
+  const targetEnv = prodEnv ? stagingEnv : undefined;
 
   core.setOutput("target_env_cname", targetEnv?.CNAME || "");
   core.setOutput("target_env_endpoint_url", targetEnv?.EndpointURL || "");
