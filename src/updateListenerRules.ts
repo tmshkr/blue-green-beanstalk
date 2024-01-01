@@ -54,7 +54,7 @@ export async function removeTargetGroups(inputs: ActionInputs) {
     const rule = rules[ResourceArn];
     for (const { Key, Value } of Tags) {
       if (
-        Key === "bluegreenbeanstalk:forward_cname" &&
+        Key === "bluegreenbeanstalk:target_cname" &&
         Value === inputs.stagingCNAME
       ) {
         await elbv2Client.send(
@@ -97,15 +97,15 @@ export async function updateTargetGroups(inputs: ActionInputs) {
   for (const { Tags, ResourceArn } of TagDescriptions) {
     const rule = rules[ResourceArn];
     const cname = Tags.find(
-      ({ Key }) => Key === "bluegreenbeanstalk:forward_cname"
+      ({ Key }) => Key === "bluegreenbeanstalk:target_cname"
     )?.Value;
 
     if (![inputs.stagingCNAME, inputs.productionCNAME].includes(cname))
       continue;
 
     const port =
-      Tags.find(({ Key }) => Key === "bluegreenbeanstalk:forward_port")
-        ?.Value || 80;
+      Tags.find(({ Key }) => Key === "bluegreenbeanstalk:target_port")?.Value ||
+      80;
 
     const targetGroupArn = targetGroupARNs[cname]?.[port];
     if (targetGroupArn) {
@@ -232,16 +232,22 @@ async function getRules(resources: EnvironmentResourceDescription[]) {
     }
   }
 
-  const listeners: Listener[] = [];
-  for (const loadBalancerArn of loadBalancerArns) {
-    await elbv2Client
-      .send(
-        new DescribeListenersCommand({
-          LoadBalancerArn: loadBalancerArn,
-        })
-      )
-      .then(({ Listeners }) => listeners.push(...Listeners));
+  if (loadBalancerArns.size === 0) {
+    throw new Error("No load balancers found");
   }
+  if (loadBalancerArns.size > 1) {
+    throw new Error("Environments must use the same load balancer");
+  }
+
+  const loadBalancerArn = Array.from(loadBalancerArns)[0];
+  const listeners: Listener[] = [];
+  await elbv2Client
+    .send(
+      new DescribeListenersCommand({
+        LoadBalancerArn: loadBalancerArn,
+      })
+    )
+    .then(({ Listeners }) => listeners.push(...Listeners));
 
   const rules: Rule[] = [];
   for (const { ListenerArn } of listeners) {
