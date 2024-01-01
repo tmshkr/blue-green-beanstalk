@@ -48,13 +48,13 @@ inputs:
   template_name:
     description: "Name of an Elastic Beanstalk configuration template to use when creating a new environment."
   terminate_unhealthy_environment:
-    description: "Whether to terminate an unhealthy target environment. If set to false, the action will exit with an error when the target environment is unhealthy."
+    description: "Whether to terminate an unhealthy target environment."
     default: "true"
   update_environment:
     description: "Whether to update an existing environment during deployment."
     default: "true"
   update_listener_rules:
-    description: "When set to true, the action will update any elbv2 listener rules on the environments' load balancer(s) tagged with a `bluegreenbeanstalk:forward_cname` key, whose value is equal to the staging or production CNAME prefix, so that it forwards to the corresponding target group. The action will also remove any target group from the listener before terminating the environment. The port of the process may be specified by another tag with the key `bluegreenbeanstalk:forward_port` whose value is the port number. If no such tag is found, the default port of 80 will be used."
+    description: "When set to true, the action will update any elbv2 listener rules on the environments' SharedLoadBalancer tagged with a `bluegreenbeanstalk:target_cname` key, whose value is equal to the staging or production CNAME prefix, so that it forwards to the corresponding target group. The action will also remove any target group from the listener before terminating the environment. The port of the process may be specified by another tag with the key `bluegreenbeanstalk:target_port` whose value is the port number. If no such tag is found, the default port of 80 will be used."
     default: "false"
   use_default_option_settings:
     description: "Whether to use default option settings when creating a new environment."
