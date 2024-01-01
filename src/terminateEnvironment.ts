@@ -8,15 +8,17 @@ import { setDescribeEventsInterval } from "./setDescribeEventsInterval";
 import { ActionInputs } from "./inputs";
 import { disableTerminationProtection } from "./updateTerminationProtection";
 import { removeTargetGroups } from "./updateListenerRules";
-import { setOutputs } from "./main";
 
 export async function terminateEnvironment(
   inputs: ActionInputs,
   env: EnvironmentDescription
 ) {
   if (!inputs.terminateUnhealthyEnvironment) {
-    await setOutputs(env);
-    process.exit(0);
+    throw {
+      type: "EarlyExit",
+      message:
+        "Target environment is unhealthy and terminateUnhealthyEnvironment is false. Exiting...",
+    };
   }
 
   if (inputs.updateListenerRules) {
@@ -44,8 +46,10 @@ export async function terminateEnvironment(
       { EnvironmentIds: [env.EnvironmentId] }
     );
     clearInterval(interval);
-  } else {
-    await setOutputs(env);
-    process.exit(0);
-  }
+  } else
+    throw {
+      type: "EarlyExit",
+      message:
+        "Target environment is terminating and waitForTermination is false. Exiting...",
+    };
 }

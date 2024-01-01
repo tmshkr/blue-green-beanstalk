@@ -15,9 +15,10 @@ import { enableTerminationProtection } from "./updateTerminationProtection";
 import { updateTargetGroups } from "./updateListenerRules";
 
 export async function main(inputs: ActionInputs) {
+  let targetEnv: EnvironmentDescription | null = null;
   try {
     const applicationVersion = await getApplicationVersion(inputs);
-    let targetEnv = await getTargetEnv(inputs);
+    targetEnv = await getTargetEnv(inputs);
 
     if (inputs.deploy) {
       if (targetEnv && inputs.updateEnvironment) {
@@ -38,12 +39,16 @@ export async function main(inputs: ActionInputs) {
     if (inputs.updateListenerRules) {
       await updateTargetGroups(inputs);
     }
-
-    await setOutputs(targetEnv);
   } catch (err) {
-    core.setFailed(err.message);
-    return Promise.reject(err);
+    if (err.type === "EarlyExit") {
+      console.log(err.message);
+    } else {
+      core.setFailed(err.message);
+      return Promise.reject(err);
+    }
   }
+
+  await setOutputs(targetEnv);
 }
 
 export async function setOutputs(targetEnv: EnvironmentDescription) {
