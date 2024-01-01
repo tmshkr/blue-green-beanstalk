@@ -1,50 +1,43 @@
 import {
-  DescribeEnvironmentsCommand,
   SwapEnvironmentCNAMEsCommand,
   waitUntilEnvironmentUpdated,
 } from "@aws-sdk/client-elastic-beanstalk";
 import { ebClient } from "./clients";
 import { ActionInputs } from "./inputs";
+import { getEnvironments } from "./getEnvironments";
 const core = require("@actions/core");
 
-export async function swapCNAMES(inputs: ActionInputs) {
-  const { Environments } = await ebClient.send(
-    new DescribeEnvironmentsCommand({
-      ApplicationName: inputs.appName,
-      EnvironmentNames: [inputs.blueEnv, inputs.greenEnv],
-      IncludeDeleted: false,
-    })
-  );
+export async function swapCNAMEs(inputs: ActionInputs) {
+  const { stagingEnv, prodEnv } = await getEnvironments(inputs);
 
-  const blueEnv = Environments.find(
-    (env) => env.EnvironmentName === inputs.blueEnv
-  );
-  const greenEnv = Environments.find(
-    (env) => env.EnvironmentName === inputs.greenEnv
-  );
-
-  if (!blueEnv || !greenEnv) {
-    core.warning("Blue or green environment not found. Cannot swap CNAMES...");
+  if (!stagingEnv || !prodEnv) {
+    core.warning("Cannot swap CNAMEs without both environments...");
     return;
   }
 
-  if (blueEnv.Status !== "Ready" || greenEnv.Status !== "Ready") {
+  if (stagingEnv.Health !== "Green") {
+    throw new Error(`Target environment is not healthy. Cannot swap CNAMEs.`);
+  }
+
+  if (stagingEnv.Status !== "Ready" || prodEnv.Status !== "Ready") {
     core.info("Environments not yet ready. Waiting...");
     await waitUntilEnvironmentUpdated(
       { client: ebClient, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
-      { EnvironmentIds: [blueEnv.EnvironmentId, greenEnv.EnvironmentId] }
+      {
+        EnvironmentIds: [stagingEnv.EnvironmentId, prodEnv.EnvironmentId],
+      }
     );
   }
 
-  core.info("Swapping CNAMES...");
+  core.info("Swapping CNAMEs...");
   await ebClient.send(
     new SwapEnvironmentCNAMEsCommand({
-      DestinationEnvironmentId: blueEnv.EnvironmentId,
-      SourceEnvironmentId: greenEnv.EnvironmentId,
+      DestinationEnvironmentId: prodEnv.EnvironmentId,
+      SourceEnvironmentId: stagingEnv.EnvironmentId,
     })
   );
   await waitUntilEnvironmentUpdated(
     { client: ebClient, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
-    { EnvironmentIds: [blueEnv.EnvironmentId, greenEnv.EnvironmentId] }
+    { EnvironmentIds: [stagingEnv.EnvironmentId, prodEnv.EnvironmentId] }
   );
 }

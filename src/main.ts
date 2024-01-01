@@ -9,7 +9,7 @@ import { getApplicationVersion } from "./getApplicationVersion";
 import { getTargetEnv } from "./getTargetEnv";
 import { createEnvironment } from "./createEnvironment";
 import { updateEnvironment } from "./updateEnvironment";
-import { swapCNAMES } from "./swapCNAMES";
+import { swapCNAMEs } from "./swapCNAMEs";
 import { ActionInputs } from "./inputs";
 import { enableTerminationProtection } from "./updateTerminationProtection";
 import { updateTargetGroups } from "./updateListenerRules";
@@ -28,44 +28,11 @@ export async function main(inputs: ActionInputs) {
     }
 
     if (inputs.enableTerminationProtection) {
-      if (!targetEnv) {
-        throw new Error(
-          "No target environment found. Cannot enable termination protection."
-        );
-      }
       await enableTerminationProtection(targetEnv);
     }
 
-    if (inputs.promote) {
-      if (!targetEnv) {
-        throw new Error(
-          "No target environment found. Cannot promote to production."
-        );
-      }
-      console.log(
-        `Promoting environment ${targetEnv.EnvironmentName} to production...`
-      );
-
-      await ebClient
-        .send(
-          new DescribeEnvironmentsCommand({
-            EnvironmentIds: [targetEnv.EnvironmentId],
-          })
-        )
-        .then(({ Environments }) => {
-          if (Environments[0].Health !== "Green") {
-            throw new Error(
-              `Environment ${targetEnv.EnvironmentName} is not healthy. Aborting promotion.`
-            );
-          }
-          if (Environments[0].Status !== "Ready") {
-            throw new Error(
-              `Environment ${targetEnv.EnvironmentName} is not ready. Aborting promotion.`
-            );
-          }
-        });
-
-      await swapCNAMES(inputs);
+    if (inputs.swapCNAMEs) {
+      await swapCNAMEs(inputs);
     }
 
     if (inputs.updateListenerRules) {
@@ -79,7 +46,7 @@ export async function main(inputs: ActionInputs) {
   }
 }
 
-async function setOutputs(targetEnv: EnvironmentDescription) {
+export async function setOutputs(targetEnv: EnvironmentDescription) {
   if (targetEnv) {
     targetEnv = await ebClient
       .send(

@@ -37,14 +37,14 @@ inputs:
   production_cname:
     description: "CNAME prefix for the domain that serves production traffic."
     required: true
-  promote:
-    description: "Whether to promote the target environment to production by swapping the CNAMEs of the blue and green environments."
-    default: "false"
   source_bundle:
     description: "Path to the source bundle to deploy. If not specified, the sample application will be used."
   staging_cname:
     description: "CNAME prefix for the staging environment."
     required: true
+  swap_cnames:
+    description: "Whether to swap the CNAMEs of the blue and green environments."
+    default: "false"
   template_name:
     description: "Name of an Elastic Beanstalk configuration template to use when creating a new environment."
   terminate_unhealthy_environment:

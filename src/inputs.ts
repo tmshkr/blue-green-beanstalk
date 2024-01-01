@@ -26,9 +26,9 @@ export function getInputs() {
       : undefined,
     platformBranchName: core.getInput("platform_branch_name"),
     productionCNAME: core.getInput("production_cname", { required: true }),
-    promote: core.getBooleanInput("promote", { required: true }),
     sourceBundle: core.getInput("source_bundle") || undefined,
     stagingCNAME: core.getInput("staging_cname", { required: true }),
+    swapCNAMEs: core.getBooleanInput("swap_cnames", { required: true }),
     templateName: core.getInput("template_name") || undefined,
     terminateUnhealthyEnvironment: core.getBooleanInput(
       "terminate_unhealthy_environment",

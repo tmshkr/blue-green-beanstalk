@@ -21,9 +21,9 @@ const inputs = {
   optionSettings: undefined,
   platformBranchName: "Docker running on 64bit Amazon Linux 2023",
   productionCNAME: `blue-green-test-prod-${key}`,
-  promote: true,
   sourceBundle: undefined,
   stagingCNAME: `blue-green-test-staging-${key}`,
+  swapCNAMEs: true,
   templateName: undefined,
   terminateUnhealthyEnvironment: true,
   updateEnvironment: true,
@@ -145,36 +145,48 @@ describe("main test", () => {
 
   describe("terminate_unhealthy_environment", () => {
     it("should not terminate the environment when terminate_unhealthy_environment is set to false", async () => {
-      try {
-        await main({
-          ...inputs,
-          terminateUnhealthyEnvironment: false,
-          deploy: false,
-        });
-        throw new Error("Should not reach here");
-      } catch (err) {
-        expect(err.message).toEqual(
-          "Target environment is unhealthy and terminate_unhealthy_environment is set to false."
+      await main({
+        ...inputs,
+        terminateUnhealthyEnvironment: false,
+        deploy: false,
+      });
+
+      const stagingEnv = await ebClient
+        .send(
+          new DescribeEnvironmentsCommand({
+            ApplicationName: inputs.appName,
+            EnvironmentNames: [inputs.blueEnv, inputs.greenEnv],
+          })
+        )
+        .then(({ Environments }) =>
+          Environments.find((env) => env.CNAME === stagingDomain)
         );
-      }
+
+      expect(stagingEnv.Health).toEqual("Grey");
     });
   });
 
   describe("wait_for_termination", () => {
     it("should not wait for the environment to terminate when wait_for_termination is set to false", async () => {
-      try {
-        await main({
-          ...inputs,
-          terminateUnhealthyEnvironment: true,
-          waitForTermination: false,
-          deploy: false,
-        });
-        throw new Error("Should not reach here");
-      } catch (err) {
-        expect(err.message).toEqual(
-          "Target environment is terminating and wait_for_termination is set to false."
+      await main({
+        ...inputs,
+        terminateUnhealthyEnvironment: true,
+        waitForTermination: false,
+        deploy: false,
+      });
+
+      const stagingEnv = await ebClient
+        .send(
+          new DescribeEnvironmentsCommand({
+            ApplicationName: inputs.appName,
+            EnvironmentNames: [inputs.blueEnv, inputs.greenEnv],
+          })
+        )
+        .then(({ Environments }) =>
+          Environments.find((env) => env.CNAME === stagingDomain)
         );
-      }
+
+      expect(stagingEnv.Status).toEqual("Terminating");
     });
   });
 });
