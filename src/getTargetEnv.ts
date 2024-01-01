@@ -35,6 +35,7 @@ export async function getTargetEnv(
         type: "EarlyExit",
         message:
           "Target environment is terminating and waitForTermination is false. Exiting...",
+        targetEnv,
       };
   } else if (targetEnv.Status !== "Ready") {
     if (inputs.waitForEnvironment) {
@@ -51,6 +52,7 @@ export async function getTargetEnv(
         type: "EarlyExit",
         message:
           "Target environment is not ready and waitForEnvironment is false. Exiting...",
+        targetEnv,
       };
   }
 

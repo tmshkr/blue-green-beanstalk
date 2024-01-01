@@ -18,6 +18,7 @@ export async function terminateEnvironment(
       type: "EarlyExit",
       message:
         "Target environment is unhealthy and terminateUnhealthyEnvironment is false. Exiting...",
+      targetEnv: env,
     };
   }
 
@@ -51,5 +52,6 @@ export async function terminateEnvironment(
       type: "EarlyExit",
       message:
         "Target environment is terminating and waitForTermination is false. Exiting...",
+      targetEnv: env,
     };
 }
