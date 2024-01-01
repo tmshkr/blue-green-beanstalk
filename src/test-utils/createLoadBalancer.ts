@@ -76,7 +76,7 @@ export async function createLoadBalancer(inputs: ActionInputs) {
       ],
       Tags: [
         {
-          Key: "bluegreenbeanstalk:forward_cname",
+          Key: "bluegreenbeanstalk:target_cname",
           Value: inputs.productionCNAME,
         },
       ],
@@ -104,7 +104,7 @@ export async function createLoadBalancer(inputs: ActionInputs) {
         },
       ],
       Tags: [
-        { Key: "bluegreenbeanstalk:forward_cname", Value: inputs.stagingCNAME },
+        { Key: "bluegreenbeanstalk:target_cname", Value: inputs.stagingCNAME },
       ],
     })
   );
