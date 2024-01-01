@@ -98,36 +98,7 @@ describe("checkInputs", () => {
         waitForDeployment: true,
         waitForTermination: true,
       })
-    ).toThrow("source_bundle and version_label must be provided together");
-
-    expect(() =>
-      checkInputs({
-        appName: `test-app`,
-        awsRegion: region,
-        blueEnv: "my-blue-env",
-        deploy: true,
-        createEnvironment: true,
-        disableTerminationProtection: false,
-        enableTerminationProtection: false,
-        greenEnv: "my-green-env",
-        optionSettings: undefined,
-        platformBranchName: "Docker running on 64bit Amazon Linux 2023",
-        productionCNAME: `prod-cname`,
-        sourceBundle: undefined,
-        stagingCNAME: `staging-cname`,
-        swapCNAMEs: true,
-        templateName: undefined,
-        terminateUnhealthyEnvironment: true,
-        updateListenerRules: false,
-        updateEnvironment: true,
-        useDefaultOptionSettings: true,
-        versionDescription: undefined,
-        versionLabel: "test-version",
-        waitForEnvironment: true,
-        waitForDeployment: true,
-        waitForTermination: true,
-      })
-    ).toThrow("source_bundle and version_label must be provided together");
+    ).toThrow("source_bundle must be provided with a version_label");
   });
 
   it("should throw an error when productionCNAME and stagingCNAME are the same", () => {

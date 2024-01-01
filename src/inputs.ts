@@ -77,13 +77,8 @@ export function checkInputs(inputs: ActionInputs) {
     throw new Error("blue_env and green_env must be different");
   }
 
-  if (
-    (!inputs.versionLabel && inputs.sourceBundle) ||
-    (inputs.versionLabel && !inputs.sourceBundle)
-  ) {
-    throw new Error(
-      "source_bundle and version_label must be provided together"
-    );
+  if (!inputs.versionLabel && inputs.sourceBundle) {
+    throw new Error("source_bundle must be provided with a version_label");
   }
 
   if (inputs.productionCNAME === inputs.stagingCNAME) {
