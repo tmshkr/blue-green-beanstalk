@@ -68,6 +68,6 @@ jobs:
 
 ### Using a Shared Load Balancer
 
-When using a [shared load balancer](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/environments-cfg-alb-shared.html), the `update_listener_rules` input can be set to true, so that the action will update any listener rules that are tagged with a `bluegreenbeanstalk:target_cname` key, whose value is equal to the `production_cname` or `staging_cname` inputs, so that the listener rule points to the same target group as the CNAME.
+When using a [shared load balancer](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/environments-cfg-alb-shared.html), the `update_listener_rules` input can be set to true, so that the action will update any listener rules that are tagged with a `bluegreenbeanstalk:target_cname` key, whose value is equal to the `production_cname` or `staging_cname` input, so that the listener rule will be updated to point to the same target group as the CNAME.
 
-To forward to a process on a port besides the default port 80, set another tag on the listener rule with a `bluegreenbeanstalk:target_port` key and a value equal to the port number.
+If using a process on a port besides the default port 80, set another tag on the listener rule with a `bluegreenbeanstalk:target_port` key and a value equal to the port number, so that the listener rule forwards to the target group on that port.
