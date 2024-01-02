@@ -31,7 +31,7 @@ inputs:
     description: "Name of the green environment."
     required: true
   option_settings:
-    description: "Path to a JSON file consisting of an array of option settings to use when creating a new environment."
+    description: "Path to a JSON file consisting of an array of option settings to use when updating an existing evironment or creating a new environment."
   platform_branch_name:
     description: "Name of the platform branch to use. When creating a new environment, it will be launched with the latest version of the specified platform branch. To see the list of available platform branches, run the `aws elasticbeanstalk list-platform-branches` command."
   production_cname:
