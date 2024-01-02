@@ -71,7 +71,9 @@ export async function removeTargetGroups(inputs: ActionInputs) {
 
 export async function updateTargetGroups(inputs: ActionInputs) {
   const { prodEnv, stagingEnv } = await getEnvironments(inputs);
-  const environments = [prodEnv, stagingEnv].filter((env) => !!env);
+  const environments = [prodEnv, stagingEnv].filter(
+    (env) => env?.Status === "Ready"
+  );
   const resources = await getEnvironmentResources(environments);
   const rules = await getRules(resources);
   const targetGroupARNs = await findTargetGroupArns(
@@ -239,18 +241,14 @@ async function getRules(resources: EnvironmentResourceDescription[]) {
     throw new Error("Environments must use the same load balancer");
   }
 
-  const loadBalancerArn = Array.from(loadBalancerArns)[0];
-  const listeners: Listener[] = [];
-  await elbv2Client
-    .send(
-      new DescribeListenersCommand({
-        LoadBalancerArn: loadBalancerArn,
-      })
-    )
-    .then(({ Listeners }) => listeners.push(...Listeners));
+  const { Listeners } = await elbv2Client.send(
+    new DescribeListenersCommand({
+      LoadBalancerArn: Array.from(loadBalancerArns)[0],
+    })
+  );
 
   const rules: Rule[] = [];
-  for (const { ListenerArn } of listeners) {
+  for (const { ListenerArn } of Listeners) {
     await elbv2Client
       .send(new DescribeRulesCommand({ ListenerArn: ListenerArn }))
       .then(({ Rules }) => {
