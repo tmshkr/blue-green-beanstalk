@@ -56,32 +56,40 @@ export async function removeTargetGroups(inputs: ActionInputs) {
         Key === "bluegreenbeanstalk:target_cname" &&
         Value === inputs.stagingCNAME
       ) {
-        await elbv2Client.send(
+        const { Rules } = await elbv2Client.send(
           new ModifyRuleCommand({
             RuleArn: ResourceArn,
             Actions: handleActions(rule.Actions),
           })
         );
-        console.log(
-          `Set ${inputs.stagingCNAME} fixed-response rule: ${ResourceArn}`
-        );
+        console.log(`Set rule:`, Rules[0]);
       }
     }
   }
 }
 
 export async function updateTargetGroups(inputs: ActionInputs) {
+  console.log("Updating listener rules...");
   const { prodEnv, stagingEnv } = await getEnvironments(inputs);
   const environments = [prodEnv, stagingEnv].filter((env) => {
     if (!env) return false;
     if (env.Status !== "Ready") {
-      console.log(`${env.EnvironmentName} not ready, skipping...`);
+      console.log(`[${env.EnvironmentName}]: Status is ${env.Status}`);
+      console.log(`[${env.EnvironmentName}]: Skipping...`);
       return false;
     }
-    if (env.Health !== "Green") {
-      console.warn(`Warning: ${env.EnvironmentName} Health is ${env.Health}`);
+
+    if (env.Health === "Green") {
+      return true;
     }
-    return true;
+
+    console.warn(`[${env.EnvironmentName}]: Health is ${env.Health}`);
+    if (env.Health === "Yellow") {
+      return true;
+    }
+
+    console.log(`[${env.EnvironmentName}]: Skipping...`);
+    return false;
   });
 
   const resources = await getEnvironmentResources(environments);
@@ -121,15 +129,18 @@ export async function updateTargetGroups(inputs: ActionInputs) {
 
     const targetGroupArn = targetGroupARNs[cname]?.[port];
     if (targetGroupArn) {
-      await elbv2Client.send(
-        new ModifyRuleCommand({
-          RuleArn: ResourceArn,
-          Actions: handleActions(rule.Actions, targetGroupArn),
-        })
-      );
-      console.log(`${cname} -> ${targetGroupArn.split("/")[1]}:${port}`);
+      await elbv2Client
+        .send(
+          new ModifyRuleCommand({
+            RuleArn: ResourceArn,
+            Actions: handleActions(rule.Actions, targetGroupArn),
+          })
+        )
+        .then(({ Rules }) => {
+          console.log(`Updated rule:`, Rules[0]);
+        });
     } else {
-      console.warn(`No target group found for ${cname} on ${ResourceArn}`);
+      console.warn(`No target group available for ${cname} on rule:`, rule);
     }
   }
 }
