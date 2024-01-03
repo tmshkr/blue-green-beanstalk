@@ -40,13 +40,8 @@ export async function main(inputs: ActionInputs) {
       await updateTargetGroups(inputs);
     }
   } catch (err) {
-    if (err.type === "EarlyExit") {
-      console.log(err.message);
-      targetEnv = err.targetEnv;
-    } else {
-      core.setFailed(err.message);
-      return Promise.reject(err);
-    }
+    core.setFailed(err.message);
+    return Promise.reject(err);
   }
 
   await setOutputs(targetEnv);

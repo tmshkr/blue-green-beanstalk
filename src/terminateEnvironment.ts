@@ -14,12 +14,9 @@ export async function terminateEnvironment(
   env: EnvironmentDescription
 ) {
   if (!inputs.terminateUnhealthyEnvironment) {
-    throw {
-      type: "EarlyExit",
-      message:
-        "Target environment is unhealthy and terminateUnhealthyEnvironment is false. Exiting...",
-      targetEnv: env,
-    };
+    throw new Error(
+      "Target environment is unhealthy and terminate_unhealthy_environment is false. Exiting..."
+    );
   }
 
   if (inputs.updateListenerRules) {
@@ -48,10 +45,7 @@ export async function terminateEnvironment(
     );
     clearInterval(interval);
   } else
-    throw {
-      type: "EarlyExit",
-      message:
-        "Target environment is terminating and waitForTermination is false. Exiting...",
-      targetEnv: env,
-    };
+    throw new Error(
+      "Target environment is terminating and wait_for_termination is false. Exiting..."
+    );
 }
