@@ -26,8 +26,8 @@ interface RulesByArn {
 }
 
 export async function removeTargetGroups(inputs: ActionInputs) {
-  const { prodEnv, stagingEnv } = await getEnvironments(inputs);
-  const environments = [prodEnv, stagingEnv].filter((env) => !!env);
+  const { stagingEnv } = await getEnvironments(inputs);
+  const environments = [stagingEnv].filter((env) => !!env);
   const resources = await getEnvironmentResources(environments);
   const rules = await getRules(resources);
 
@@ -72,9 +72,18 @@ export async function removeTargetGroups(inputs: ActionInputs) {
 
 export async function updateTargetGroups(inputs: ActionInputs) {
   const { prodEnv, stagingEnv } = await getEnvironments(inputs);
-  const environments = [prodEnv, stagingEnv].filter(
-    (env) => env?.Status === "Ready" && env?.Health === "Green"
-  );
+  const environments = [prodEnv, stagingEnv].filter((env) => {
+    if (!env) return false;
+    if (env.Status !== "Ready") {
+      console.log(`${env.EnvironmentName} not ready, skipping...`);
+      return false;
+    }
+    if (env.Health !== "Green") {
+      console.warn(`Warning: ${env.EnvironmentName} Health is ${env.Health}`);
+    }
+    return true;
+  });
+
   const resources = await getEnvironmentResources(environments);
   const rules = await getRules(resources);
   const targetGroupARNs = await findTargetGroupArns(
