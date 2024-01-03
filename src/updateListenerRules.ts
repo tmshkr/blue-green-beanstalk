@@ -10,7 +10,6 @@ import {
   DescribeRulesCommand,
   DescribeTagsCommand,
   DescribeTargetGroupsCommand,
-  Listener,
   ModifyRuleCommand,
   Rule,
 } from "@aws-sdk/client-elastic-load-balancing-v2";
@@ -63,7 +62,9 @@ export async function removeTargetGroups(inputs: ActionInputs) {
             Actions: handleActions(rule.Actions),
           })
         );
-        console.log(`Updated ${inputs.stagingCNAME} rule: ${ResourceArn}`);
+        console.log(
+          `Set ${inputs.stagingCNAME} fixed-response rule: ${ResourceArn}`
+        );
       }
     }
   }
@@ -72,7 +73,7 @@ export async function removeTargetGroups(inputs: ActionInputs) {
 export async function updateTargetGroups(inputs: ActionInputs) {
   const { prodEnv, stagingEnv } = await getEnvironments(inputs);
   const environments = [prodEnv, stagingEnv].filter(
-    (env) => env?.Status === "Ready"
+    (env) => env?.Status === "Ready" && env?.Health === "Green"
   );
   const resources = await getEnvironmentResources(environments);
   const rules = await getRules(resources);
@@ -117,9 +118,9 @@ export async function updateTargetGroups(inputs: ActionInputs) {
           Actions: handleActions(rule.Actions, targetGroupArn),
         })
       );
-      console.log(`Updated ${cname} rule: ${ResourceArn}`);
+      console.log(`${cname} -> ${targetGroupArn.split("/")[1]}:${port}`);
     } else {
-      console.warn(`No target group found for ${cname} from ${ResourceArn}`);
+      console.warn(`No target group found for ${cname} on ${ResourceArn}`);
     }
   }
 }
@@ -173,7 +174,7 @@ async function findTargetGroupArns(
         })
       )
       .then(({ TargetGroups }) => {
-        for (const { TargetGroupArn, Port } of TargetGroups) {
+        for (const { Port, TargetGroupArn } of TargetGroups) {
           result[CNAME][Port] = TargetGroupArn;
         }
       });
