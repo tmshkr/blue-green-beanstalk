@@ -56,13 +56,13 @@ export async function removeTargetGroups(inputs: ActionInputs) {
         Key === "bluegreenbeanstalk:target_cname" &&
         Value === inputs.stagingCNAME
       ) {
-        const { Rules } = await elbv2Client.send(
+        await elbv2Client.send(
           new ModifyRuleCommand({
             RuleArn: ResourceArn,
             Actions: handleActions(rule.Actions),
           })
         );
-        console.log(`Set rule:`, Rules[0]);
+        console.log(`Updated rule:`, rule.RuleArn);
       }
     }
   }
@@ -129,18 +129,19 @@ export async function updateTargetGroups(inputs: ActionInputs) {
 
     const targetGroupArn = targetGroupARNs[cname]?.[port];
     if (targetGroupArn) {
-      await elbv2Client
-        .send(
-          new ModifyRuleCommand({
-            RuleArn: ResourceArn,
-            Actions: handleActions(rule.Actions, targetGroupArn),
-          })
-        )
-        .then(({ Rules }) => {
-          console.log(`Updated rule:`, Rules[0]);
-        });
+      await elbv2Client.send(
+        new ModifyRuleCommand({
+          RuleArn: ResourceArn,
+          Actions: handleActions(rule.Actions, targetGroupArn),
+        })
+      );
+
+      console.log(`Updated rule:`, rule.RuleArn);
     } else {
-      console.warn(`No target group available for ${cname} on rule:`, rule);
+      console.warn(
+        `No target group available for ${cname} on rule:`,
+        rule.RuleArn
+      );
     }
   }
 }
