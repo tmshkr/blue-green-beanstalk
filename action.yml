@@ -31,7 +31,7 @@ inputs:
     description: "Name of the green environment."
     required: true
   option_settings:
-    description: "Path to a JSON file consisting of an array of option settings to use when creating a new environment."
+    description: "Path to a JSON file consisting of an array of option settings to use when updating an existing evironment or creating a new environment."
   platform_branch_name:
     description: "Name of the platform branch to use. When creating a new environment, it will be launched with the latest version of the specified platform branch. To see the list of available platform branches, run the `aws elasticbeanstalk list-platform-branches` command."
   production_cname:
@@ -48,7 +48,7 @@ inputs:
   template_name:
     description: "Name of an Elastic Beanstalk configuration template to use when creating a new environment."
   terminate_unhealthy_environment:
-    description: "Whether to terminate an unhealthy target environment."
+    description: "Whether to terminate an unhealthy target environment. If set to false, the action will fail if the target environment is unhealthy."
     default: "true"
   update_environment:
     description: "Whether to update an existing environment during deployment."
@@ -64,13 +64,13 @@ inputs:
   version_label:
     description: "Version label to use for the new application version."
   wait_for_deployment:
-    description: "Whether to wait for the deployment or environment creation to complete."
+    description: "Whether to wait for the deployment to complete."
     default: "true"
   wait_for_environment:
-    description: "Whether to wait for the target environment to be ready before deployment."
+    description: "Whether to wait for the target environment to be ready before deployment. If set to false, the action will fail if the target environment is not ready."
     default: "true"
   wait_for_termination:
-    description: "Whether to wait for an environment to be terminated."
+    description: "Whether to wait for an environment to be terminated. If set to false, the action will fail if the target environment is terminating."
     default: "true"
 outputs:
   target_env_cname:

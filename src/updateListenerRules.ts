@@ -10,7 +10,6 @@ import {
   DescribeRulesCommand,
   DescribeTagsCommand,
   DescribeTargetGroupsCommand,
-  Listener,
   ModifyRuleCommand,
   Rule,
 } from "@aws-sdk/client-elastic-load-balancing-v2";
@@ -27,8 +26,8 @@ interface RulesByArn {
 }
 
 export async function removeTargetGroups(inputs: ActionInputs) {
-  const { prodEnv, stagingEnv } = await getEnvironments(inputs);
-  const environments = [prodEnv, stagingEnv].filter((env) => !!env);
+  const { stagingEnv } = await getEnvironments(inputs);
+  const environments = [stagingEnv].filter((env) => !!env);
   const resources = await getEnvironmentResources(environments);
   const rules = await getRules(resources);
 
@@ -63,15 +62,36 @@ export async function removeTargetGroups(inputs: ActionInputs) {
             Actions: handleActions(rule.Actions),
           })
         );
-        console.log(`Updated ${inputs.stagingCNAME} rule: ${ResourceArn}`);
+        console.log(`Updated rule:`, rule.RuleArn);
       }
     }
   }
 }
 
 export async function updateTargetGroups(inputs: ActionInputs) {
+  console.log("Updating listener rules...");
   const { prodEnv, stagingEnv } = await getEnvironments(inputs);
-  const environments = [prodEnv, stagingEnv].filter((env) => !!env);
+  const environments = [prodEnv, stagingEnv].filter((env) => {
+    if (!env) return false;
+    if (env.Status !== "Ready") {
+      console.log(`[${env.EnvironmentName}]: Status is ${env.Status}`);
+      console.log(`[${env.EnvironmentName}]: Skipping...`);
+      return false;
+    }
+
+    if (env.Health === "Green") {
+      return true;
+    }
+
+    console.warn(`[${env.EnvironmentName}]: Health is ${env.Health}`);
+    if (env.Health === "Yellow") {
+      return true;
+    }
+
+    console.log(`[${env.EnvironmentName}]: Skipping...`);
+    return false;
+  });
+
   const resources = await getEnvironmentResources(environments);
   const rules = await getRules(resources);
   const targetGroupARNs = await findTargetGroupArns(
@@ -115,9 +135,13 @@ export async function updateTargetGroups(inputs: ActionInputs) {
           Actions: handleActions(rule.Actions, targetGroupArn),
         })
       );
-      console.log(`Updated ${cname} rule: ${ResourceArn}`);
+
+      console.log(`Updated rule:`, rule.RuleArn);
     } else {
-      console.warn(`No target group found for ${cname} from ${ResourceArn}`);
+      console.warn(
+        `No target group available for ${cname} on rule:`,
+        rule.RuleArn
+      );
     }
   }
 }
@@ -171,7 +195,7 @@ async function findTargetGroupArns(
         })
       )
       .then(({ TargetGroups }) => {
-        for (const { TargetGroupArn, Port } of TargetGroups) {
+        for (const { Port, TargetGroupArn } of TargetGroups) {
           result[CNAME][Port] = TargetGroupArn;
         }
       });
@@ -239,18 +263,14 @@ async function getRules(resources: EnvironmentResourceDescription[]) {
     throw new Error("Environments must use the same load balancer");
   }
 
-  const loadBalancerArn = Array.from(loadBalancerArns)[0];
-  const listeners: Listener[] = [];
-  await elbv2Client
-    .send(
-      new DescribeListenersCommand({
-        LoadBalancerArn: loadBalancerArn,
-      })
-    )
-    .then(({ Listeners }) => listeners.push(...Listeners));
+  const { Listeners } = await elbv2Client.send(
+    new DescribeListenersCommand({
+      LoadBalancerArn: Array.from(loadBalancerArns)[0],
+    })
+  );
 
   const rules: Rule[] = [];
-  for (const { ListenerArn } of listeners) {
+  for (const { ListenerArn } of Listeners) {
     await elbv2Client
       .send(new DescribeRulesCommand({ ListenerArn: ListenerArn }))
       .then(({ Rules }) => {
