@@ -42,32 +42,37 @@ name: Example Deploy Workflow
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE }}
+          aws-region: ${{ vars.AWS_REGION }}
       - name: Generate source bundle
         run: zip -r bundle.zip . -x '*.git*'
       - name: Deploy
         uses: tmshkr/blue-green-beanstalk@v4
         with:
           app_name: "test-app"
-          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_region: ${{ vars.AWS_REGION }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           blue_env: "my-blue-env"
           deploy: true # Must be set to true to deploy
           green_env: "my-green-env"
           platform_branch_name: "Docker running on 64bit Amazon Linux 2023"
           production_cname: "blue-green-beanstalk-prod"
           source_bundle: "bundle.zip"
-          swap_cnames: ${{ github.ref_name == 'main' }}
           staging_cname: "blue-green-beanstalk-staging"
+          swap_cnames: ${{ github.ref_name == 'main' }}
           version_description: ${{ github.event.head_commit.message }}
           version_label: ${{ github.ref_name }}-${{ github.sha }}
 ```
 
 ### Using a Shared Load Balancer
 
-When using a [shared load balancer](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/environments-cfg-alb-shared.html), the `update_listener_rules` input can be set to true, and the action will update any listener rules that are tagged with a `bluegreenbeanstalk:target_cname` key, whose value is equal to the `production_cname` or `staging_cname` input, so that the listener rule will be updated to point to the same target group as the CNAME.
+When using a [shared load balancer](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/environments-cfg-alb-shared.html), the `update_listener_rules` input can be set to true, and the action will update any listener rules on the load balancer that are tagged with a `bluegreenbeanstalk:target_cname` key, whose value is equal to the `production_cname` or `staging_cname` input, so that the listener rule points to the same target group as the CNAME.
 
 If using a process on a port besides the default port 80, set another tag on the listener rule with a `bluegreenbeanstalk:target_port` key and a value equal to the port number, so that the listener rule forwards to the target group on that port.
