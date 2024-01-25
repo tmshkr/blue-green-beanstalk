@@ -10,7 +10,7 @@ The action will create the following resources:
 
 Based on the provided inputs, the action will determine which environment is the target environment, to which a new application version should be deployed.
 
-The action uses the values of the `production_cname` and `staging_cname` inputs to determine which environment is the production or staging environment. Accordingly, the production CNAME should always point to the production environment, and staging CNAME should always point to the staging environment.
+The action uses the values of the `production_cname` and `staging_cname` inputs to determine which environment is the production or staging environment. Accordingly, the production CNAME should always point to the production environment, and the staging CNAME should always point to the staging environment.
 
 If neither environment exists, the action will create a new environment with the `production_cname` input. If the production environment already exists, the action will target the staging environment, creating it if it doesn't exist.
 
