@@ -28,6 +28,7 @@ const inputs = {
   disableTerminationProtection: false,
   enableTerminationProtection: false,
   greenEnv: `my-green-env-${key}`,
+  minimumHealthColor: 3,
   optionSettings: undefined,
   platformBranchName: "Docker running on 64bit Amazon Linux 2023",
   productionCNAME: `shared-alb-prod-${key}`,

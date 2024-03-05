@@ -30,6 +30,9 @@ inputs:
   green_env:
     description: "Name of the green environment."
     required: true
+  minimum_health_color:
+    description: "Minimum health color (Green, Yellow, Red, or Grey) required for the target environment to be considered healthy."
+    default: "Green"
   option_settings:
     description: "Path to a JSON file consisting of an array of option settings to use when updating an existing evironment or creating a new environment."
   platform_branch_name:
