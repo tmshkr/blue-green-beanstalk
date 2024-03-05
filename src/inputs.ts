@@ -21,6 +21,11 @@ export function getInputs() {
       "enable_termination_protection"
     ),
     greenEnv: core.getInput("green_env", { required: true }),
+    minimumHealthColor: mapHealthColorToInt(
+      core.getInput("minimum_health_color", {
+        required: true,
+      })
+    ),
     optionSettings: core.getInput("option_settings")
       ? JSON.parse(fs.readFileSync(core.getInput("option_settings")))
       : undefined,
@@ -87,5 +92,20 @@ export function checkInputs(inputs: ActionInputs) {
 
   if (inputs.optionSettings && !Array.isArray(inputs.optionSettings)) {
     throw new Error("option_settings must be an array");
+  }
+}
+
+export function mapHealthColorToInt(healthColor: string) {
+  switch (healthColor.toUpperCase()) {
+    case "GREEN":
+      return 3;
+    case "YELLOW":
+      return 2;
+    case "RED":
+      return 1;
+    case "GREY":
+      return 0;
+    default:
+      throw new Error("Invalid health color");
   }
 }

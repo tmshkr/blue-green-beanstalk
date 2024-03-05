@@ -4,7 +4,7 @@ import {
   EnvironmentDescription,
 } from "@aws-sdk/client-elastic-beanstalk";
 import { ebClient } from "./clients";
-import { ActionInputs } from "./inputs";
+import { ActionInputs, mapHealthColorToInt } from "./inputs";
 import { getEnvironments } from "./getEnvironments";
 import { terminateEnvironment } from "./terminateEnvironment";
 import { setDescribeEventsInterval } from "./setDescribeEventsInterval";
@@ -50,27 +50,11 @@ export async function getTargetEnv(
       );
   }
 
-  switch (targetEnv.Health) {
-    case "Green":
-      console.log("Target environment's health is Green.");
-      return targetEnv;
-
-    case "Yellow":
-      console.log("Target environment's health is Yellow.");
-      await terminateEnvironment(inputs, targetEnv);
-      return null;
-
-    case "Red":
-      console.log("Target environment's health is Red.");
-      await terminateEnvironment(inputs, targetEnv);
-      return null;
-
-    case "Grey":
-      console.log("Target environment's health is Grey.");
-      await terminateEnvironment(inputs, targetEnv);
-      return null;
-
-    default:
-      throw new Error("Target environment is unknown.");
+  console.log(`Target environment's health is ${targetEnv.Health}.`);
+  if (mapHealthColorToInt(targetEnv.Health) < inputs.minimumHealthColor) {
+    await terminateEnvironment(inputs, targetEnv);
+    return null;
+  } else {
+    return targetEnv;
   }
 }

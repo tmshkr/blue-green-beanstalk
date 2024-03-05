@@ -3,7 +3,7 @@ import {
   waitUntilEnvironmentUpdated,
 } from "@aws-sdk/client-elastic-beanstalk";
 import { ebClient } from "./clients";
-import { ActionInputs } from "./inputs";
+import { ActionInputs, mapHealthColorToInt } from "./inputs";
 import { getEnvironments } from "./getEnvironments";
 const core = require("@actions/core");
 
@@ -15,7 +15,7 @@ export async function swapCNAMEs(inputs: ActionInputs) {
     return;
   }
 
-  if (stagingEnv.Health !== "Green") {
+  if (mapHealthColorToInt(stagingEnv.Health) < inputs.minimumHealthColor) {
     throw new Error(`Target environment is not healthy. Cannot swap CNAMEs.`);
   }
 
