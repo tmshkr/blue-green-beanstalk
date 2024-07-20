@@ -22,6 +22,9 @@ const inputs = {
   optionSettings: undefined,
   platformBranchName: "Docker running on 64bit Amazon Linux 2023",
   productionCNAME: `blue-green-test-prod-${key}`,
+  send_command: `
+  echo "it works!" > /var/app/current/it-works.txt
+  `,
   sourceBundle: undefined,
   stagingCNAME: `blue-green-test-staging-${key}`,
   swapCNAMEs: true,
@@ -78,6 +81,8 @@ describe("main test", () => {
       expect(Environments).toHaveLength(1);
       expect(Environments[0].CNAME).toEqual(prodDomain);
     });
+
+    // TODOL it should send the command to the target environment and execute it
 
     it("should create a new environment and then swap the CNAMES", async () => {
       await main(inputs);
