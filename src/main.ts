@@ -12,6 +12,7 @@ import { updateEnvironment } from "./updateEnvironment";
 import { swapCNAMEs } from "./swapCNAMEs";
 import { ActionInputs } from "./inputs";
 import { enableTerminationProtection } from "./updateTerminationProtection";
+import { sendCommand } from "./sendCommand";
 import { updateTargetGroups } from "./updateListenerRules";
 
 export async function main(inputs: ActionInputs) {
@@ -30,6 +31,10 @@ export async function main(inputs: ActionInputs) {
 
     if (inputs.enableTerminationProtection) {
       await enableTerminationProtection(targetEnv);
+    }
+
+    if (inputs.send_command) {
+      await sendCommand(inputs, targetEnv);
     }
 
     if (inputs.swapCNAMEs) {

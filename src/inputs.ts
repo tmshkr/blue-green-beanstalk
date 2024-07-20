@@ -31,6 +31,7 @@ export function getInputs() {
       : undefined,
     platformBranchName: core.getInput("platform_branch_name"),
     productionCNAME: core.getInput("production_cname", { required: true }),
+    send_command: core.getInput("send_command") || undefined,
     sourceBundle: core.getInput("source_bundle") || undefined,
     stagingCNAME: core.getInput("staging_cname", { required: true }),
     swapCNAMEs: core.getBooleanInput("swap_cnames", { required: true }),
