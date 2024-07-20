@@ -5,15 +5,28 @@ function parseActionYaml() {
   const { inputs, outputs } = parse(readFileSync("../action.yml", "utf8"));
   let inputsTable = `
 ## Inputs
-| Name | Required | Default | Description |
-| ---- | -------- | ------- | ----------- |`;
+### Required Inputs
+| Name | Description |
+| ---- | ----------- |`;
   for (const key in inputs) {
     const input = inputs[key];
-    inputsTable += `
-| ${key} | ${input.required ? "Yes" : "No"} | ${input.default ?? "none"} | ${
-      input.description
-    } |`;
+    if (input.required) {
+      inputsTable += `
+| ${key} | ${input.description} |`;
+    }
   }
+  inputsTable += `
+### Optional Inputs
+| Name | Default | Description |
+| ---- | ------- | ----------- |`;
+  for (const key in inputs) {
+    const input = inputs[key];
+    if (!input.required) {
+      inputsTable += `
+| ${key} | ${input.default ?? ""} | ${input.description} |`;
+    }
+  }
+
   let outputsTable = `
 ## Outputs
 | Name | Description |
