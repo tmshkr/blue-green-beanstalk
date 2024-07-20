@@ -1,0 +1,41 @@
+import { parse } from "yaml";
+import { readFileSync, writeFileSync } from "fs";
+
+function parseActionYaml() {
+  const { inputs, outputs } = parse(readFileSync("../action.yml", "utf8"));
+  let inputsTable = `
+## Inputs
+| Name | Required | Default | Description |
+| ---- | -------- | ------- | ----------- |`;
+  for (const key in inputs) {
+    const input = inputs[key];
+    inputsTable += `
+| ${key} | ${input.required ? "Yes" : "No"} | ${input.default ?? "none"} | ${
+      input.description
+    } |`;
+  }
+  let outputsTable = `
+## Outputs
+| Name | Description |
+| ---- | ----------- |`;
+  for (const key in outputs) {
+    const output = outputs[key];
+    outputsTable += `
+| ${key} | ${output.description} |`;
+  }
+  return inputsTable + outputsTable;
+}
+
+async function writeToReadme() {
+  const actionsTable = parseActionYaml();
+  const readme = readFileSync("../README.md", "utf8");
+  writeFileSync(
+    "../README.md",
+    readme.replace(
+      /<!-- START_ACTIONS_TABLE -->([\s\S])*<!-- END_ACTIONS_TABLE -->/g,
+      `<!-- START_ACTIONS_TABLE -->\n${actionsTable}\n<!-- END_ACTIONS_TABLE -->`
+    )
+  );
+}
+
+writeToReadme();
