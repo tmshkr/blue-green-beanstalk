@@ -60,7 +60,14 @@ inputs:
     description: "Whether to update an existing environment during deployment."
     default: "true"
   update_listener_rules:
-    description: "When set to true, the action will update any elbv2 listener rules on the environments' SharedLoadBalancer tagged with a `bluegreenbeanstalk:target_cname` key, whose value is equal to the staging or production CNAME prefix, so that it forwards to the corresponding target group. The action will also remove any target group from the listener before terminating the environment. The port of the process may be specified by another tag with the key `bluegreenbeanstalk:target_port` whose value is the port number. If no such tag is found, the default port of 80 will be used."
+    description: |
+      When set to true, the action will update any elbv2 listener rules on the environments' SharedLoadBalancer tagged with a `bluegreenbeanstalk:target_cname` key, whose value is equal to the staging or production CNAME prefix, so that it forwards to the corresponding target group.
+
+      For example, you can tag a listener rule that matches the host `my-domain.com` with a tag containing `bluegreenbeanstalk:target_cname` as its key and `my-prod-cname` as its value, and the action will update the listener rule to point to the same target group as the environment with the CNAME `my-prod-cname`.
+
+      The listener rules are updated after the CNAMEs are swapped, so this keeps the listener rules in sync with the CNAMEs.
+
+      The port of the process may be specified by another tag with the key `bluegreenbeanstalk:target_port` whose value is the port number. If no such tag is found, the default port of 80 will be used.
     default: "false"
   use_default_option_settings:
     description: "Whether to use default option settings when creating a new environment."
