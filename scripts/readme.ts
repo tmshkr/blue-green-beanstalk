@@ -12,7 +12,7 @@ function parseActionYaml() {
     const input = inputs[key];
     if (input.required) {
       inputsTable += `
-| ${key} | ${input.description} |`;
+| ${key} | ${input.description.replaceAll("\n", "<br/>")} |`;
     }
   }
   inputsTable += `
@@ -23,7 +23,10 @@ function parseActionYaml() {
     const input = inputs[key];
     if (!input.required) {
       inputsTable += `
-| ${key} | ${input.default ?? ""} | ${input.description} |`;
+| ${key} | ${input.default ?? ""} | ${input.description.replaceAll(
+        "\n",
+        "<br/>"
+      )} |`;
     }
   }
 
@@ -34,7 +37,7 @@ function parseActionYaml() {
   for (const key in outputs) {
     const output = outputs[key];
     outputsTable += `
-| ${key} | ${output.description} |`;
+| ${key} | ${output.description.replaceAll("\n", "<br/>")} |`;
   }
   return inputsTable + outputsTable;
 }
