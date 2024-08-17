@@ -55,13 +55,13 @@ async function waitForCommand({ command }: { command: Command }) {
   ) {
     const { CompletedCount, TargetCount } = command;
     const percentComplete = (CompletedCount / TargetCount) * 100;
-    console.log(
-      `Command status: ${
-        command.Status
-      } - ${CompletedCount}/${TargetCount} (${percentComplete.toPrecision(
+    let msg = `Command status: ${command.Status}`;
+    if (percentComplete) {
+      msg += ` - ${CompletedCount}/${TargetCount} (${percentComplete.toPrecision(
         3
-      )}%) completed...`
-    );
+      )}%) completed...`;
+    }
+    console.log(msg);
     await new Promise((resolve) => setTimeout(resolve, 10000));
     command = await ssmClient
       .send(new ListCommandsCommand({ CommandId: command.CommandId }))
