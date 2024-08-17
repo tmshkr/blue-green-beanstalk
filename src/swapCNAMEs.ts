@@ -8,14 +8,18 @@ import { getEnvironments } from "./getEnvironments";
 const core = require("@actions/core");
 
 export async function swapCNAMEs(inputs: ActionInputs) {
-  const { stagingEnv, prodEnv } = await getEnvironments(inputs);
+  if (inputs.single_env) {
+    core.warning("Cannot swap CNAMEs with a single environment...");
+    return;
+  }
 
+  const { stagingEnv, prodEnv } = await getEnvironments(inputs);
   if (!stagingEnv || !prodEnv) {
     core.warning("Cannot swap CNAMEs without both environments...");
     return;
   }
 
-  if (mapHealthColorToInt(stagingEnv.Health) < inputs.minimumHealthColor) {
+  if (mapHealthColorToInt(stagingEnv.Health) < inputs.minimum_health_color) {
     throw new Error(`Target environment is not healthy. Cannot swap CNAMEs.`);
   }
 

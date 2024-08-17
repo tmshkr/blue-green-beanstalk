@@ -18,13 +18,13 @@ export async function updateEnvironment(
   await ebClient.send(
     new UpdateEnvironmentCommand({
       EnvironmentId: targetEnv.EnvironmentId,
-      OptionSettings: inputs.optionSettings,
-      TemplateName: inputs.templateName,
+      OptionSettings: inputs.option_settings,
+      TemplateName: inputs.template_name,
       VersionLabel: applicationVersion?.VersionLabel,
     })
   );
 
-  if (!inputs.waitForDeployment) {
+  if (!inputs.wait_for_deployment) {
     return;
   }
 

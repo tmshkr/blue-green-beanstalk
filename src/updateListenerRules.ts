@@ -54,7 +54,7 @@ export async function removeTargetGroups(inputs: ActionInputs) {
     for (const { Key, Value } of Tags) {
       if (
         Key === "bluegreenbeanstalk:target_cname" &&
-        Value === inputs.stagingCNAME
+        Value === inputs.staging_cname
       ) {
         await elbv2Client.send(
           new ModifyRuleCommand({
@@ -73,6 +73,13 @@ export async function updateTargetGroups(inputs: ActionInputs) {
   const { prodEnv, stagingEnv } = await getEnvironments(inputs);
   const environments = [prodEnv, stagingEnv].filter((env) => {
     if (!env) return false;
+    if (
+      inputs.update_listener_rules_env_name !== "true" &&
+      inputs.update_listener_rules_env_name !== env.EnvironmentName
+    ) {
+      return false;
+    }
+
     if (env.Status !== "Ready") {
       console.log(`[${env.EnvironmentName}]: Status is ${env.Status}`);
       console.log(`[${env.EnvironmentName}]: Skipping...`);
@@ -120,7 +127,7 @@ export async function updateTargetGroups(inputs: ActionInputs) {
       ({ Key }) => Key === "bluegreenbeanstalk:target_cname"
     )?.Value;
 
-    if (![inputs.stagingCNAME, inputs.productionCNAME].includes(cname))
+    if (![inputs.staging_cname, inputs.production_cname].includes(cname))
       continue;
 
     const port =
@@ -148,9 +155,9 @@ export async function updateTargetGroups(inputs: ActionInputs) {
 
 function getCnamePrefix(inputs: ActionInputs, env: EnvironmentDescription) {
   const prefix = env.CNAME.split(
-    `.${inputs.awsRegion}.elasticbeanstalk.com`
+    `.${inputs.aws_region}.elasticbeanstalk.com`
   )[0];
-  if (![inputs.productionCNAME, inputs.stagingCNAME].includes(prefix)) {
+  if (![inputs.production_cname, inputs.staging_cname].includes(prefix)) {
     throw new Error(`Unexpected CNAME: ${prefix}`);
   }
   return prefix;

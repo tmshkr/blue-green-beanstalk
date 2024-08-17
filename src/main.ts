@@ -22,14 +22,14 @@ export async function main(inputs: ActionInputs) {
     targetEnv = await getTargetEnv(inputs);
 
     if (inputs.deploy) {
-      if (targetEnv && inputs.updateEnvironment) {
+      if (targetEnv && inputs.update_environment) {
         await updateEnvironment(inputs, targetEnv, applicationVersion);
-      } else if (!targetEnv && inputs.createEnvironment) {
+      } else if (!targetEnv && inputs.create_environment) {
         targetEnv = await createEnvironment(inputs, applicationVersion);
       }
     }
 
-    if (inputs.enableTerminationProtection) {
+    if (inputs.enable_termination_protection) {
       await enableTerminationProtection(targetEnv);
     }
 
@@ -37,11 +37,11 @@ export async function main(inputs: ActionInputs) {
       await sendCommand(inputs, targetEnv);
     }
 
-    if (inputs.swapCNAMEs) {
+    if (inputs.swap_cnames) {
       await swapCNAMEs(inputs);
     }
 
-    if (inputs.updateListenerRules) {
+    if (inputs.update_listener_rules) {
       await updateTargetGroups(inputs);
     }
   } catch (err) {
