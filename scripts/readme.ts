@@ -16,12 +16,26 @@ function parseActionYaml() {
     }
   }
   inputsTable += `
+### Dependent Inputs
+Inputs that must be provided together.
+| Name | Description | Needs |
+| ---- | ----------- | ----- |`;
+  for (const key in inputs) {
+    const input = inputs[key];
+    if (input.needs) {
+      inputsTable += `
+| ${key} | ${input.description.replaceAll("\n", "<br/>")} | ${input.needs
+        .map((other) => `\`${other}\``)
+        .join(", ")} |`;
+    }
+  }
+  inputsTable += `
 ### Optional Inputs
 | Name | Default | Description |
 | ---- | ------- | ----------- |`;
   for (const key in inputs) {
     const input = inputs[key];
-    if (!input.required) {
+    if (!input.required && !input.needs) {
       inputsTable += `
 | ${key} | ${input.default ?? ""} | ${input.description.replaceAll(
         "\n",

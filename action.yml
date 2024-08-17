@@ -42,14 +42,11 @@ inputs:
     needs: [blue_env, green_env, staging_cname]
   send_command:
     description: "Command to send to the target environment after (optional) deployment. Specify a shell script or series of commands to run. Useful for running tasks related to deployment, such as swapping environment variables before promoting an environment to production."
-    required: false
   single_env:
     description: "Name of a single environment to deploy. If specified, the blue/green environments and production/staging CNAMEs must not be provided."
-    required: false
     needs: [single_env_cname]
   single_env_cname:
     description: "CNAME prefix to use for a single-environment deployment."
-    required: false
     needs: [single_env]
   source_bundle:
     description: "Path to the source bundle to deploy. If not specified, the sample application will be used."
