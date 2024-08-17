@@ -72,18 +72,18 @@ export async function createEnvironment(
     new CreateEnvironmentCommand({
       ApplicationName: inputs.app_name,
       CNAMEPrefix:
-        inputs.single_env_cname ?? prodEnv
-          ? inputs.staging_cname
-          : inputs.production_cname,
+        inputs.single_env_cname ??
+        (prodEnv ? inputs.staging_cname : inputs.production_cname),
       EnvironmentName:
-        inputs.single_env ?? prodEnv?.EnvironmentName === inputs.blue_env
+        inputs.single_env ??
+        (prodEnv?.EnvironmentName === inputs.blue_env
           ? inputs.green_env
-          : inputs.blue_env,
-      OptionSettings: inputs.option_settings
-        ? inputs.option_settings
-        : inputs.use_default_option_settings
-        ? defaultOptionSettings
-        : undefined,
+          : inputs.blue_env),
+      OptionSettings:
+        inputs.option_settings ??
+        (inputs.use_default_option_settings
+          ? defaultOptionSettings
+          : undefined),
       PlatformArn: await getPlatformArn(inputs.platform_branch_name),
       TemplateName: inputs.template_name,
       VersionLabel: applicationVersion?.VersionLabel,
