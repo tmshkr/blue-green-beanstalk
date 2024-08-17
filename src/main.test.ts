@@ -2,45 +2,49 @@ import {
   DescribeEnvironmentsCommand,
   TerminateEnvironmentCommand,
 } from "@aws-sdk/client-elastic-beanstalk";
-
+import { ActionInputs } from "./inputs";
 import { ebClient } from "./clients";
 import { main } from "./main";
 import { spinDownEnvironment } from "./test-utils/spinDownEnvironment";
 const { randomBytes } = require("node:crypto");
 
 const key = randomBytes(3).toString("hex");
-const inputs = {
-  appName: `test-app-${key}`,
-  awsRegion: "us-west-2",
-  blueEnv: `my-blue-env-${key}`,
-  createEnvironment: true,
+const inputs: ActionInputs = {
+  app_name: `test-app-${key}`,
+  aws_region: "us-west-2",
+  blue_env: `my-blue-env-${key}`,
+  create_environment: true,
   deploy: true,
-  disableTerminationProtection: false,
-  enableTerminationProtection: false,
-  greenEnv: `my-green-env-${key}`,
-  minimumHealthColor: 3,
-  optionSettings: undefined,
-  platformBranchName: "Docker running on 64bit Amazon Linux 2023",
-  productionCNAME: `blue-green-test-prod-${key}`,
+  disable_termination_protection: false,
+  enable_termination_protection: false,
+  green_env: `my-green-env-${key}`,
+  minimum_health_color: 3,
+  option_settings: undefined,
+  platform_branch_name: "Docker running on 64bit Amazon Linux 2023",
+  production_cname: `blue-green-test-prod-${key}`,
   send_command: `
   echo "it works!" > /var/app/current/it-works.txt
   `,
-  sourceBundle: undefined,
-  stagingCNAME: `blue-green-test-staging-${key}`,
-  swapCNAMEs: true,
-  templateName: undefined,
-  terminateUnhealthyEnvironment: true,
-  updateEnvironment: true,
-  updateListenerRules: false,
-  useDefaultOptionSettings: true,
-  versionDescription: undefined,
-  versionLabel: undefined,
-  waitForEnvironment: true,
-  waitForDeployment: true,
-  waitForTermination: true,
+  single_env: undefined,
+  single_env_cname: undefined,
+  source_bundle: undefined,
+  staging_cname: `blue-green-test-staging-${key}`,
+  swap_cnames: true,
+  template_name: undefined,
+  terminate_unhealthy_environment: true,
+  update_environment: true,
+  update_listener_rules: false,
+  update_listener_rules_env_name: "false",
+  use_default_option_settings: true,
+  version_description: undefined,
+  version_label: undefined,
+  wait_for_command: true,
+  wait_for_environment: true,
+  wait_for_deployment: true,
+  wait_for_termination: true,
 };
-const prodDomain = `${inputs.productionCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`;
-const stagingDomain = `${inputs.stagingCNAME}.${inputs.awsRegion}.elasticbeanstalk.com`;
+const prodDomain = `${inputs.production_cname}.${inputs.aws_region}.elasticbeanstalk.com`;
+const stagingDomain = `${inputs.staging_cname}.${inputs.aws_region}.elasticbeanstalk.com`;
 
 jest.setTimeout(1000 * 60 * 10);
 describe("main test", () => {
@@ -48,8 +52,8 @@ describe("main test", () => {
     it("should not have any environments", async () => {
       const { Environments } = await ebClient.send(
         new DescribeEnvironmentsCommand({
-          ApplicationName: inputs.appName,
-          EnvironmentNames: [inputs.blueEnv, inputs.greenEnv],
+          ApplicationName: inputs.app_name,
+          EnvironmentNames: [inputs.blue_env, inputs.green_env],
         })
       );
       expect(Environments).toHaveLength(0);
@@ -60,8 +64,8 @@ describe("main test", () => {
 
       const { Environments } = await ebClient.send(
         new DescribeEnvironmentsCommand({
-          ApplicationName: inputs.appName,
-          EnvironmentNames: [inputs.blueEnv, inputs.greenEnv],
+          ApplicationName: inputs.app_name,
+          EnvironmentNames: [inputs.blue_env, inputs.green_env],
         })
       );
 
@@ -74,8 +78,8 @@ describe("main test", () => {
     it("should have one environment with the production domain", async () => {
       const { Environments } = await ebClient.send(
         new DescribeEnvironmentsCommand({
-          ApplicationName: inputs.appName,
-          EnvironmentNames: [inputs.blueEnv, inputs.greenEnv],
+          ApplicationName: inputs.app_name,
+          EnvironmentNames: [inputs.blue_env, inputs.green_env],
         })
       );
       expect(Environments).toHaveLength(1);
@@ -89,8 +93,8 @@ describe("main test", () => {
 
       const { Environments } = await ebClient.send(
         new DescribeEnvironmentsCommand({
-          ApplicationName: inputs.appName,
-          EnvironmentNames: [inputs.blueEnv, inputs.greenEnv],
+          ApplicationName: inputs.app_name,
+          EnvironmentNames: [inputs.blue_env, inputs.green_env],
         })
       );
 
@@ -111,8 +115,8 @@ describe("main test", () => {
       const stagingEnv = await ebClient
         .send(
           new DescribeEnvironmentsCommand({
-            ApplicationName: inputs.appName,
-            EnvironmentNames: [inputs.blueEnv, inputs.greenEnv],
+            ApplicationName: inputs.app_name,
+            EnvironmentNames: [inputs.blue_env, inputs.green_env],
           })
         )
         .then(({ Environments }) =>
@@ -154,7 +158,7 @@ describe("main test", () => {
       try {
         await main({
           ...inputs,
-          terminateUnhealthyEnvironment: false,
+          terminate_unhealthy_environment: false,
           deploy: false,
         });
         throw new Error("Should not reach here");
@@ -171,8 +175,8 @@ describe("main test", () => {
       try {
         await main({
           ...inputs,
-          terminateUnhealthyEnvironment: true,
-          waitForTermination: false,
+          terminate_unhealthy_environment: true,
+          wait_for_termination: false,
           deploy: false,
         });
         throw new Error("Should not reach here");
@@ -187,9 +191,9 @@ describe("main test", () => {
 
 afterAll(async () => {
   await ebClient.send(
-    new TerminateEnvironmentCommand({ EnvironmentName: inputs.blueEnv })
+    new TerminateEnvironmentCommand({ EnvironmentName: inputs.blue_env })
   );
   await ebClient.send(
-    new TerminateEnvironmentCommand({ EnvironmentName: inputs.greenEnv })
+    new TerminateEnvironmentCommand({ EnvironmentName: inputs.green_env })
   );
 });
