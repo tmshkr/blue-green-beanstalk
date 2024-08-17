@@ -14,7 +14,7 @@ inputs:
     description: "AWS session token for using temporary credentials. May instead be specified via the AWS_SESSION_TOKEN environment variable."
   blue_env:
     description: "Name of the blue environment."
-    required: true
+    needs: [green_env, production_cname, staging_cname]
   create_environment:
     description: "Whether to create a new environment during deployment if the target environment doesn't exist."
     default: "true"
@@ -29,7 +29,7 @@ inputs:
     default: "false"
   green_env:
     description: "Name of the green environment."
-    required: true
+    needs: [blue_env, production_cname, staging_cname]
   minimum_health_color:
     description: "Minimum health color (Green, Yellow, Red, or Grey) required for the target environment to be considered healthy."
     default: "Green"
@@ -39,15 +39,23 @@ inputs:
     description: "Name of the platform branch to use. When creating a new environment, it will be launched with the latest version of the specified platform branch. To see the list of available platform branches, run the `aws elasticbeanstalk list-platform-branches` command."
   production_cname:
     description: "CNAME prefix for the domain that serves production traffic."
-    required: true
+    needs: [blue_env, green_env, staging_cname]
   send_command:
     description: "Command to send to the target environment after (optional) deployment. Specify a shell script or series of commands to run. Useful for running tasks related to deployment, such as swapping environment variables before promoting an environment to production."
     required: false
+  single_env:
+    description: "Name of a single environment to deploy. If specified, the blue/green environments and production/staging CNAMEs must not be provided."
+    required: false
+    needs: [single_env_cname]
+  single_env_cname:
+    description: "CNAME prefix to use for a single-environment deployment."
+    required: false
+    needs: [single_env]
   source_bundle:
     description: "Path to the source bundle to deploy. If not specified, the sample application will be used."
   staging_cname:
     description: "CNAME prefix for the staging environment."
-    required: true
+    needs: [blue_env, green_env, production_cname]
   swap_cnames:
     description: "Whether to swap the CNAMEs of the blue and green environments."
     default: "false"
@@ -55,7 +63,7 @@ inputs:
     description: "Name of an Elastic Beanstalk configuration template to use when creating a new environment."
   terminate_unhealthy_environment:
     description: "Whether to terminate an unhealthy target environment. If set to false, the action will fail if the target environment is unhealthy."
-    default: "true"
+    default: "false"
   update_environment:
     description: "Whether to update an existing environment during deployment."
     default: "true"
@@ -68,6 +76,8 @@ inputs:
       The listener rules are updated after the CNAMEs are swapped, so this keeps the listener rules in sync with the CNAMEs.
 
       The port of the process may be specified by another tag with the key `bluegreenbeanstalk:target_port` whose value is the port number. If no such tag is found, the default port of 80 will be used.
+
+      If you'd only like to update the listener rules for a certain environment, you can set this input to the name of the environment you'd like to update.
     default: "false"
   use_default_option_settings:
     description: "Whether to use default option settings when creating a new environment."
@@ -76,6 +86,9 @@ inputs:
     description: "Description to use for the new application version."
   version_label:
     description: "Version label to use for the new application version."
+  wait_for_command:
+    description: "Whether to wait for the send_command execution to complete."
+    default: "true"
   wait_for_deployment:
     description: "Whether to wait for the deployment to complete."
     default: "true"
