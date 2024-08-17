@@ -153,11 +153,9 @@ function getCnamePrefix(inputs: ActionInputs, env: EnvironmentDescription) {
     `.${inputs.aws_region}.elasticbeanstalk.com`
   )[0];
   if (
-    ![
-      inputs.production_cname,
-      inputs.staging_cname,
-      inputs.single_env_cname,
-    ].includes(prefix)
+    ![inputs.production_cname, inputs.staging_cname, inputs.single_env_cname]
+      .filter(Boolean)
+      .includes(prefix)
   ) {
     throw new Error(`Unexpected CNAME: ${prefix}`);
   }
