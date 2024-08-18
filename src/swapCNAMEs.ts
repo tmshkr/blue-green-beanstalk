@@ -5,7 +5,7 @@ import {
 import { ebClient } from "./clients";
 import { ActionInputs, mapHealthColorToInt } from "./inputs";
 import { getEnvironments } from "./getEnvironments";
-const core = require("@actions/core");
+import core from "@actions/core";
 
 export async function swapCNAMEs(inputs: ActionInputs) {
   if (inputs.single_env) {
