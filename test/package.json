@@ -1,0 +1,10 @@
+{
+  "name": "test-stack",
+  "scripts": {
+    "deploy": "cdk deploy"
+  },
+  "dependencies": {
+    "aws-cdk": "^2.152.0",
+    "aws-cdk-lib": "^2.152.0"
+  }
+}
