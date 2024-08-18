@@ -1,9 +1,10 @@
 {
   "name": "test-stack",
   "scripts": {
-    "deploy": "cdk deploy"
+    "cdk:deploy": "cdk deploy"
   },
   "dependencies": {
+    "@aws-sdk/client-cloudformation": "^3.632.0",
     "aws-cdk": "^2.152.0",
     "aws-cdk-lib": "^2.152.0"
   }

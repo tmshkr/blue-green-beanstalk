@@ -28,6 +28,14 @@ export class TestAlbStack extends Stack {
       ],
     });
 
+    this.exportValue(this.vpc.vpcId, { name: "TestVpcId" });
+    this.exportValue(
+      this.vpc.publicSubnets.map(({ subnetId }) => subnetId).join(","),
+      {
+        name: "TestPublicSubnets",
+      }
+    );
+
     this.albSecurityGroup = new ec2.SecurityGroup(this, "AlbSecurityGroup", {
       allowAllOutbound: true,
       securityGroupName: "AlbSecurityGroup",
