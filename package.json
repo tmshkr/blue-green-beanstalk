@@ -4,16 +4,16 @@
   "type": "module",
   "scripts": {
     "build": "ncc build src/run.ts -o dist",
-    "dev": "dotenvx run -- tsx src/run.ts",
-    "test": "vitest main.test.ts"
+    "bundle-test-app": "cd test && zip bundle.zip docker-compose.yml",
+    "dev": "tsx --env-file=.env src/run.ts",
+    "test": "vitest"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^22.4.0",
     "@vercel/ncc": "^0.38.1",
-    "dotenv": "^16.4.5",
-    "ts-node": "^10.9.2",
+    "tsx": "^4.17.0",
     "typescript": "^5.5.4",
     "vitest": "^2.0.5",
     "yaml": "^2.5.0"
@@ -28,7 +28,6 @@
     "@aws-sdk/client-elastic-load-balancing-v2": "^3.632.0",
     "@aws-sdk/client-s3": "^3.633.0",
     "@aws-sdk/client-ssm": "^3.632.0",
-    "ansi-styles": "^6.2.1",
-    "tsx": "^4.17.0"
+    "ansi-styles": "^6.2.1"
   }
 }
