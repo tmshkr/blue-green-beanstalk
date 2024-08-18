@@ -45,9 +45,9 @@ const inputs: ActionInputs = {
 const prodDomain = `${inputs.production_cname}.${inputs.aws_region}.elasticbeanstalk.com`;
 const stagingDomain = `${inputs.staging_cname}.${inputs.aws_region}.elasticbeanstalk.com`;
 
-// jest.setTimeout(1000 * 60 * 10);
 suite(
-  "main test",
+  "main blue/green test",
+  { concurrent: false, timeout: 1000 * 60 * 10, sequential: true },
   () => {
     describe("create the production environment", () => {
       test("should not have any environments", async () => {
@@ -188,8 +188,7 @@ suite(
         }
       });
     });
-  },
-  { concurrent: false, timeout: 1000 * 60 * 10, sequential: true }
+  }
 );
 
 afterAll(async () => {
