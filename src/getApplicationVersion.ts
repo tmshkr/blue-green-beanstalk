@@ -5,7 +5,7 @@ import {
   DescribeApplicationVersionsCommand,
 } from "@aws-sdk/client-elastic-beanstalk";
 import { PutObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
-const fs = require("fs");
+import { readFileSync } from "fs";
 
 import { ebClient, s3Client } from "./clients";
 import { ActionInputs } from "./inputs";
@@ -31,6 +31,7 @@ export async function getApplicationVersion(inputs: ActionInputs) {
       VersionLabels: [inputs.version_label],
     })
   );
+  // .catch((error) => {});
 
   if (ApplicationVersions.length > 0) {
     console.log(`Application version ${inputs.version_label} already exists.`);
@@ -40,7 +41,7 @@ export async function getApplicationVersion(inputs: ActionInputs) {
   return await createApplicationVersion(inputs);
 }
 
-function encodeRFC3986URIComponent(str) {
+function encodeRFC3986URIComponent(str: string) {
   return encodeURIComponent(str).replace(
     /[!'()*]/g,
     (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`
@@ -81,7 +82,7 @@ async function createApplicationVersion(inputs: ActionInputs) {
         new PutObjectCommand({
           Bucket: S3Bucket,
           Key: S3Key,
-          Body: fs.readFileSync(inputs.source_bundle),
+          Body: readFileSync(inputs.source_bundle),
         })
       );
     }

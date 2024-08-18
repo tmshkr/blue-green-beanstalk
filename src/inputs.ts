@@ -1,6 +1,6 @@
 import * as core from "@actions/core";
 export type ActionInputs = ReturnType<typeof getInputs>;
-const fs = require("fs");
+import { readFileSync } from "fs";
 
 export function getInputs() {
   const inputs = {
@@ -27,7 +27,7 @@ export function getInputs() {
       })
     ),
     option_settings: core.getInput("option_settings")
-      ? JSON.parse(fs.readFileSync(core.getInput("option_settings")))
+      ? JSON.parse(readFileSync(core.getInput("option_settings"), "utf8"))
       : undefined,
     platform_branch_name: core.getInput("platform_branch_name"),
     production_cname: core.getInput("production_cname"),
@@ -48,7 +48,7 @@ export function getInputs() {
     update_listener_rules: core.getBooleanInput("update_listener_rules", {
       required: true,
     }),
-    update_listener_rules_env_name: core.getInput("update_listener_rules", {
+    update_listener_rules_cname: core.getInput("update_listener_rules", {
       required: true,
     }),
     version_description: core.getInput("version_description") || undefined,
