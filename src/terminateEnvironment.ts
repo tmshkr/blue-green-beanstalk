@@ -38,7 +38,11 @@ export async function terminateEnvironment(
   );
 
   if (inputs.wait_for_termination) {
-    const interval = setDescribeEventsInterval(env.EnvironmentId, startTime);
+    const interval = setDescribeEventsInterval({
+      inputs,
+      environment: env,
+      startTime,
+    });
     await waitUntilEnvironmentTerminated(
       { client: ebClient, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
       { EnvironmentIds: [env.EnvironmentId] }

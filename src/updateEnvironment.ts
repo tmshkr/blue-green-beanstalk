@@ -28,10 +28,11 @@ export async function updateEnvironment(
     return;
   }
 
-  const interval = setDescribeEventsInterval(
-    targetEnv.EnvironmentId,
-    startTime
-  );
+  const interval = setDescribeEventsInterval({
+    environment: targetEnv,
+    inputs,
+    startTime,
+  });
   await waitUntilEnvironmentUpdated(
     { client: ebClient, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
     { EnvironmentIds: [targetEnv.EnvironmentId] }

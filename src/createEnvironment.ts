@@ -99,7 +99,11 @@ export async function createEnvironment(
   }
 
   const ac = new AbortController();
-  const interval = setDescribeEventsInterval(newEnv.EnvironmentId, startTime);
+  const interval = setDescribeEventsInterval({
+    environment: newEnv,
+    inputs,
+    startTime,
+  });
   await waitUntilEnvironmentExists(
     {
       client: ebClient,

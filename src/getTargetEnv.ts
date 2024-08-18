@@ -23,7 +23,10 @@ export async function getTargetEnv(
   if (targetEnv.Status === "Terminating") {
     if (inputs.wait_for_termination) {
       console.log("Target environment is terminating. Waiting...");
-      const interval = setDescribeEventsInterval(targetEnv.EnvironmentId);
+      const interval = setDescribeEventsInterval({
+        environment: targetEnv,
+        inputs,
+      });
       await waitUntilEnvironmentTerminated(
         { client: ebClient, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
         { EnvironmentIds: [targetEnv.EnvironmentId] }
@@ -37,7 +40,10 @@ export async function getTargetEnv(
   } else if (targetEnv.Status !== "Ready") {
     if (inputs.wait_for_environment) {
       console.log("Target environment is not ready. Waiting...");
-      const interval = setDescribeEventsInterval(targetEnv.EnvironmentId);
+      const interval = setDescribeEventsInterval({
+        inputs,
+        environment: targetEnv,
+      });
       await waitUntilEnvironmentUpdated(
         { client: ebClient, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
         { EnvironmentIds: [targetEnv.EnvironmentId] }
