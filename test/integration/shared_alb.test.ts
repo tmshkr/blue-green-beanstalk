@@ -51,7 +51,7 @@ const inputs: ActionInputs = {
 const prodDomain = `${inputs.production_cname}.${inputs.aws_region}.elasticbeanstalk.com`;
 const stagingDomain = `${inputs.staging_cname}.${inputs.aws_region}.elasticbeanstalk.com`;
 
-const exports = {
+const cfnImports = {
   TestSharedLoadBalancerArn: "",
   TestDefaultListenerArn: "",
   TestProdListenerRuleArn: "",
@@ -71,17 +71,17 @@ beforeAll(async () => {
 
   const { Outputs } = Stacks[0];
   for (const { ExportName, OutputValue } of Outputs) {
-    exports[ExportName as keyof typeof exports] = OutputValue;
+    cfnImports[ExportName as keyof typeof cfnImports] = OutputValue;
   }
-  for (const key in exports) {
-    if (!exports[key]) {
-      throw new Error(`Missing export ${key}`);
+  for (const key in cfnImports) {
+    if (!cfnImports[key]) {
+      throw new Error(`Missing CfnImport: [${key}]`);
     }
   }
 
   await elbv2Client.send(
     new AddTagsCommand({
-      ResourceArns: [exports.TestProdListenerRuleArn],
+      ResourceArns: [cfnImports.TestProdListenerRuleArn],
       Tags: [
         {
           Key: "bluegreenbeanstalk:target_cname",
@@ -93,7 +93,7 @@ beforeAll(async () => {
 
   await elbv2Client.send(
     new AddTagsCommand({
-      ResourceArns: [exports.TestStagingListenerRuleArn],
+      ResourceArns: [cfnImports.TestStagingListenerRuleArn],
       Tags: [
         {
           Key: "bluegreenbeanstalk:target_cname",
@@ -112,17 +112,17 @@ beforeAll(async () => {
     {
       Namespace: "aws:ec2:vpc",
       OptionName: "VPCId",
-      Value: exports.TestVpcId,
+      Value: cfnImports.TestVpcId,
     },
     {
       Namespace: "aws:ec2:vpc",
       OptionName: "Subnets",
-      Value: exports.TestPublicSubnets,
+      Value: cfnImports.TestPublicSubnets,
     },
     {
       Namespace: "aws:ec2:vpc",
       OptionName: "ELBSubnets",
-      Value: exports.TestPublicSubnets,
+      Value: cfnImports.TestPublicSubnets,
     },
     {
       Namespace: "aws:elasticbeanstalk:environment",
@@ -152,10 +152,10 @@ beforeAll(async () => {
     {
       Namespace: "aws:elbv2:loadbalancer",
       OptionName: "SharedLoadBalancer",
-      Value: exports.TestSharedLoadBalancerArn,
+      Value: cfnImports.TestSharedLoadBalancerArn,
     },
   ];
-}, 1000 * 60 * 10);
+});
 
 suite(
   "main SharedLoadBalancer test",
@@ -191,19 +191,20 @@ suite(
       test("should update the tagged listener rule to point to the correct target group", async () => {
         const { Rules } = await elbv2Client.send(
           new DescribeRulesCommand({
-            ListenerArn: exports.TestDefaultListenerArn,
+            ListenerArn: cfnImports.TestDefaultListenerArn,
           })
         );
 
         let prodTargetGroup: string | undefined;
         let testProdRuleTG: string | undefined;
         for (const { Conditions, Actions, RuleArn } of Rules) {
-          if (RuleArn === exports.TestProdListenerRuleArn) {
-            testProdRuleTG = Actions[0].TargetGroupArn;
+          const { TargetGroupArn } = Actions[0];
+          if (RuleArn === cfnImports.TestProdListenerRuleArn) {
+            testProdRuleTG = TargetGroupArn;
           } else {
             for (const { HostHeaderConfig } of Conditions) {
               if (HostHeaderConfig?.Values.includes(prodDomain)) {
-                prodTargetGroup = Actions[0].TargetGroupArn;
+                prodTargetGroup = TargetGroupArn;
               }
             }
           }
@@ -226,7 +227,7 @@ suite(
         expect(Environments).toHaveLength(1);
       });
 
-      test("should create a new environment and then promote it to production", async () => {
+      test("should create a new environment and then swap the CNAMEs", async () => {
         await main(inputs);
 
         const { Environments } = await ebClient.send(
@@ -251,7 +252,7 @@ suite(
       test("should update both tagged listener rules to point to the correct target groups", async () => {
         const { Rules } = await elbv2Client.send(
           new DescribeRulesCommand({
-            ListenerArn: exports.TestDefaultListenerArn,
+            ListenerArn: cfnImports.TestDefaultListenerArn,
           })
         );
 
@@ -260,16 +261,17 @@ suite(
         let testProdRuleTG: string | undefined;
         let testStagingRuleTG: string | undefined;
         for (const { Conditions, Actions, RuleArn } of Rules) {
-          if (RuleArn === exports.TestProdListenerRuleArn) {
-            testProdRuleTG = Actions[0].TargetGroupArn;
-          } else if (RuleArn === exports.TestStagingListenerRuleArn) {
-            testStagingRuleTG = Actions[0].TargetGroupArn;
+          const { TargetGroupArn } = Actions[0];
+          if (RuleArn === cfnImports.TestProdListenerRuleArn) {
+            testProdRuleTG = TargetGroupArn;
+          } else if (RuleArn === cfnImports.TestStagingListenerRuleArn) {
+            testStagingRuleTG = TargetGroupArn;
           } else {
             for (const { HostHeaderConfig } of Conditions) {
               if (HostHeaderConfig?.Values.includes(prodDomain)) {
-                prodTargetGroup = Actions[0].TargetGroupArn;
+                prodTargetGroup = TargetGroupArn;
               } else if (HostHeaderConfig?.Values.includes(stagingDomain)) {
-                stagingTargetGroup = Actions[0].TargetGroupArn;
+                stagingTargetGroup = TargetGroupArn;
               }
             }
           }
