@@ -1,4 +1,4 @@
-import { expect, test, beforeAll, it, afterAll, suite, describe } from "vitest";
+import { expect, test, beforeAll, afterAll, suite, describe } from "vitest";
 import {
   DescribeEnvironmentsCommand,
   TerminateEnvironmentCommand,
@@ -47,6 +47,9 @@ const inputs: ActionInputs = {
   wait_for_termination: true,
   use_default_option_settings: false,
 };
+
+const prodDomain = `${inputs.production_cname}.${inputs.aws_region}.elasticbeanstalk.com`;
+const stagingDomain = `${inputs.staging_cname}.${inputs.aws_region}.elasticbeanstalk.com`;
 
 const exports = {
   TestSharedLoadBalancerArn: "",
@@ -192,17 +195,23 @@ suite(
           })
         );
 
-        const prodTargetGroup = Rules.find((rule) =>
-          rule.Conditions.find(
-            (c) => c.Field === "host-header"
-          ).Values[0].startsWith(inputs.production_cname)
-        ).Actions[0].TargetGroupArn;
+        let prodTargetGroup: string | undefined;
+        let testProdRuleTG: string | undefined;
+        for (const { Conditions, Actions, RuleArn } of Rules) {
+          if (RuleArn === exports.TestProdListenerRuleArn) {
+            testProdRuleTG = Actions[0].TargetGroupArn;
+          } else {
+            for (const { HostHeaderConfig } of Conditions) {
+              if (HostHeaderConfig?.Values.includes(prodDomain)) {
+                prodTargetGroup = Actions[0].TargetGroupArn;
+              }
+            }
+          }
+        }
 
         expect(prodTargetGroup).toBeDefined();
-        expect(
-          Rules.find((rule) => rule.RuleArn === exports.TestProdListenerRuleArn)
-            .Actions[0].TargetGroupArn
-        ).toEqual(prodTargetGroup);
+        expect(testProdRuleTG).toBeDefined();
+        expect(testProdRuleTG).toEqual(prodTargetGroup);
       });
     });
 
@@ -246,30 +255,33 @@ suite(
           })
         );
 
-        const prodTargetGroup = Rules.find((rule) =>
-          rule.Conditions.find(
-            (c) => c.Field === "host-header"
-          ).Values[0].startsWith(inputs.production_cname)
-        ).Actions[0].TargetGroupArn;
-        const stagingTargetGroup = Rules.find((rule) =>
-          rule.Conditions.find(
-            (c) => c.Field === "host-header"
-          ).Values[0].startsWith(inputs.staging_cname)
-        ).Actions[0].TargetGroupArn;
+        let prodTargetGroup: string | undefined;
+        let stagingTargetGroup: string | undefined;
+        let testProdRuleTG: string | undefined;
+        let testStagingRuleTG: string | undefined;
+        for (const { Conditions, Actions, RuleArn } of Rules) {
+          if (RuleArn === exports.TestProdListenerRuleArn) {
+            testProdRuleTG = Actions[0].TargetGroupArn;
+          } else if (RuleArn === exports.TestStagingListenerRuleArn) {
+            testStagingRuleTG = Actions[0].TargetGroupArn;
+          } else {
+            for (const { HostHeaderConfig } of Conditions) {
+              if (HostHeaderConfig?.Values.includes(prodDomain)) {
+                prodTargetGroup = Actions[0].TargetGroupArn;
+              } else if (HostHeaderConfig?.Values.includes(stagingDomain)) {
+                stagingTargetGroup = Actions[0].TargetGroupArn;
+              }
+            }
+          }
+        }
 
         expect(prodTargetGroup).toBeDefined();
         expect(stagingTargetGroup).toBeDefined();
+        expect(testProdRuleTG).toBeDefined();
+        expect(testStagingRuleTG).toBeDefined();
 
-        expect(
-          Rules.find((rule) => rule.RuleArn === exports.TestProdListenerRuleArn)
-            .Actions[0].TargetGroupArn
-        ).toEqual(prodTargetGroup);
-
-        expect(
-          Rules.find(
-            (rule) => rule.RuleArn === exports.TestStagingListenerRuleArn
-          ).Actions[0].TargetGroupArn
-        ).toEqual(stagingTargetGroup);
+        expect(testProdRuleTG).toEqual(prodTargetGroup);
+        expect(testStagingRuleTG).toEqual(stagingTargetGroup);
       });
     });
   }
