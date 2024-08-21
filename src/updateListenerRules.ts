@@ -63,8 +63,8 @@ export async function updateTargetGroups(inputs: ActionInputs) {
   const environments = [prodEnv, stagingEnv, singleEnv].filter((env) => {
     if (!env) return false;
     if (
-      inputs.update_listener_rules_env_name !== "true" &&
-      inputs.update_listener_rules_env_name !== env.EnvironmentName
+      inputs.update_listener_rules_cname !== "true" &&
+      inputs.update_listener_rules_cname !== getCnamePrefix(inputs, env)
     ) {
       return false;
     }
@@ -152,13 +152,6 @@ function getCnamePrefix(inputs: ActionInputs, env: EnvironmentDescription) {
   const prefix = env.CNAME.split(
     `.${inputs.aws_region}.elasticbeanstalk.com`
   )[0];
-  if (
-    ![inputs.production_cname, inputs.staging_cname, inputs.single_env_cname]
-      .filter(Boolean)
-      .includes(prefix)
-  ) {
-    throw new Error(`Unexpected CNAME: ${prefix}`);
-  }
   return prefix;
 }
 
