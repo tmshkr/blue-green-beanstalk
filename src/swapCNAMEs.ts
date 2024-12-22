@@ -5,17 +5,17 @@ import {
 import { ebClient } from "./clients";
 import { ActionInputs, mapHealthColorToInt } from "./inputs";
 import { getEnvironments } from "./getEnvironments";
-import core from "@actions/core";
+import { info, warning } from "@actions/core";
 
 export async function swapCNAMEs(inputs: ActionInputs) {
   if (inputs.single_env) {
-    core.warning("Cannot swap CNAMEs with a single environment...");
+    warning("Cannot swap CNAMEs with a single environment...");
     return;
   }
 
   const { stagingEnv, prodEnv } = await getEnvironments(inputs);
   if (!stagingEnv || !prodEnv) {
-    core.warning("Cannot swap CNAMEs without both environments...");
+    warning("Cannot swap CNAMEs without both environments...");
     return;
   }
 
@@ -24,7 +24,7 @@ export async function swapCNAMEs(inputs: ActionInputs) {
   }
 
   if (stagingEnv.Status !== "Ready" || prodEnv.Status !== "Ready") {
-    core.info("Environments not yet ready. Waiting...");
+    info("Environments not yet ready. Waiting...");
     await waitUntilEnvironmentUpdated(
       { client: ebClient, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
       {
@@ -33,7 +33,7 @@ export async function swapCNAMEs(inputs: ActionInputs) {
     );
   }
 
-  core.info("Swapping CNAMEs...");
+  info("Swapping CNAMEs...");
   await ebClient.send(
     new SwapEnvironmentCNAMEsCommand({
       DestinationEnvironmentId: prodEnv.EnvironmentId,

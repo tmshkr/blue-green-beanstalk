@@ -2,7 +2,7 @@ import {
   EnvironmentDescription,
   DescribeEnvironmentsCommand,
 } from "@aws-sdk/client-elastic-beanstalk";
-import * as core from "@actions/core";
+import { setFailed, setOutput } from "@actions/core";
 
 import { ebClient } from "./clients";
 import { getApplicationVersion } from "./getApplicationVersion";
@@ -45,7 +45,7 @@ export async function main(inputs: ActionInputs) {
       await updateTargetGroups(inputs);
     }
   } catch (err) {
-    core.setFailed(err.message);
+    setFailed(err.message);
     return Promise.reject(err);
   }
 
@@ -63,10 +63,10 @@ export async function setOutputs(targetEnv: EnvironmentDescription) {
       .then(({ Environments }) => Environments[0]);
   }
 
-  core.setOutput("target_env_cname", targetEnv?.CNAME || "");
-  core.setOutput("target_env_endpoint_url", targetEnv?.EndpointURL || "");
-  core.setOutput("target_env_id", targetEnv?.EnvironmentId || "");
-  core.setOutput("target_env_json", JSON.stringify(targetEnv) || "");
-  core.setOutput("target_env_name", targetEnv?.EnvironmentName || "");
-  core.setOutput("target_env_status", targetEnv?.Status || "");
+  setOutput("target_env_cname", targetEnv?.CNAME || "");
+  setOutput("target_env_endpoint_url", targetEnv?.EndpointURL || "");
+  setOutput("target_env_id", targetEnv?.EnvironmentId || "");
+  setOutput("target_env_json", JSON.stringify(targetEnv) || "");
+  setOutput("target_env_name", targetEnv?.EnvironmentName || "");
+  setOutput("target_env_status", targetEnv?.Status || "");
 }

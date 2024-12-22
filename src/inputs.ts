@@ -1,69 +1,69 @@
-import * as core from "@actions/core";
+import { getBooleanInput, getInput, setFailed } from "@actions/core";
 export type ActionInputs = ReturnType<typeof getInputs>;
 import { readFileSync } from "fs";
 
 export function getInputs() {
   const inputs = {
-    app_name: core.getInput("app_name", { required: true }),
+    app_name: getInput("app_name", { required: true }),
     aws_region:
-      core.getInput("aws_region") ||
+      getInput("aws_region") ||
       process.env.AWS_REGION ||
       process.env.AWS_DEFAULT_REGION,
-    blue_env: core.getInput("blue_env"),
-    create_environment: core.getBooleanInput("create_environment", {
+    blue_env: getInput("blue_env"),
+    create_environment: getBooleanInput("create_environment", {
       required: true,
     }),
-    deploy: core.getBooleanInput("deploy", { required: true }),
-    disable_termination_protection: core.getBooleanInput(
+    deploy: getBooleanInput("deploy", { required: true }),
+    disable_termination_protection: getBooleanInput(
       "disable_termination_protection"
     ),
-    enable_termination_protection: core.getBooleanInput(
+    enable_termination_protection: getBooleanInput(
       "enable_termination_protection"
     ),
-    green_env: core.getInput("green_env"),
+    green_env: getInput("green_env"),
     minimum_health_color: mapHealthColorToInt(
-      core.getInput("minimum_health_color", {
+      getInput("minimum_health_color", {
         required: true,
       })
     ),
-    option_settings: core.getInput("option_settings")
-      ? JSON.parse(readFileSync(core.getInput("option_settings"), "utf8"))
+    option_settings: getInput("option_settings")
+      ? JSON.parse(readFileSync(getInput("option_settings"), "utf8"))
       : undefined,
-    platform_branch_name: core.getInput("platform_branch_name"),
-    production_cname: core.getInput("production_cname"),
-    send_command: core.getInput("send_command") || undefined,
-    source_bundle: core.getInput("source_bundle") || undefined,
-    staging_cname: core.getInput("staging_cname"),
-    swap_cnames: core.getBooleanInput("swap_cnames", { required: true }),
-    single_env: core.getInput("single_env") || undefined,
-    single_env_cname: core.getInput("single_env_cname") || undefined,
-    template_name: core.getInput("template_name") || undefined,
-    terminate_unhealthy_environment: core.getBooleanInput(
+    platform_branch_name: getInput("platform_branch_name"),
+    production_cname: getInput("production_cname"),
+    send_command: getInput("send_command") || undefined,
+    source_bundle: getInput("source_bundle") || undefined,
+    staging_cname: getInput("staging_cname"),
+    swap_cnames: getBooleanInput("swap_cnames", { required: true }),
+    single_env: getInput("single_env") || undefined,
+    single_env_cname: getInput("single_env_cname") || undefined,
+    template_name: getInput("template_name") || undefined,
+    terminate_unhealthy_environment: getBooleanInput(
       "terminate_unhealthy_environment",
       { required: true }
     ),
-    update_environment: core.getBooleanInput("update_environment", {
+    update_environment: getBooleanInput("update_environment", {
       required: true,
     }),
-    update_listener_rules: core.getBooleanInput("update_listener_rules", {
+    update_listener_rules: getBooleanInput("update_listener_rules", {
       required: true,
     }),
-    update_listener_rules_cname: core.getInput("update_listener_rules", {
+    update_listener_rules_cname: getInput("update_listener_rules", {
       required: true,
     }),
-    version_description: core.getInput("version_description") || undefined,
-    version_label: core.getInput("version_label") || undefined,
-    wait_for_command: core.getBooleanInput("wait_for_command"),
-    wait_for_deployment: core.getBooleanInput("wait_for_deployment", {
+    version_description: getInput("version_description") || undefined,
+    version_label: getInput("version_label") || undefined,
+    wait_for_command: getBooleanInput("wait_for_command"),
+    wait_for_deployment: getBooleanInput("wait_for_deployment", {
       required: true,
     }),
-    wait_for_environment: core.getBooleanInput("wait_for_environment", {
+    wait_for_environment: getBooleanInput("wait_for_environment", {
       required: true,
     }),
-    wait_for_termination: core.getBooleanInput("wait_for_termination", {
+    wait_for_termination: getBooleanInput("wait_for_termination", {
       required: true,
     }),
-    use_default_option_settings: core.getBooleanInput(
+    use_default_option_settings: getBooleanInput(
       "use_default_option_settings",
       {
         required: true,
@@ -74,7 +74,7 @@ export function getInputs() {
   try {
     checkInputs(inputs);
   } catch (err) {
-    core.setFailed(err.message);
+    setFailed(err.message);
     throw err;
   }
   return inputs;
