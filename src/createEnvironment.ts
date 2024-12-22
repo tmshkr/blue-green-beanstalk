@@ -62,6 +62,11 @@ export async function createEnvironment(
     },
     {
       Namespace: "aws:autoscaling:launchconfiguration",
+      OptionName: "DisableIMDSv1",
+      Value: true,
+    },
+    {
+      Namespace: "aws:autoscaling:launchconfiguration",
       OptionName: "IamInstanceProfile",
       Value: "aws-elasticbeanstalk-ec2-role",
     },
