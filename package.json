@@ -11,23 +11,23 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@types/node": "^22.4.0",
-    "@vercel/ncc": "^0.38.1",
-    "tsx": "^4.17.0",
-    "typescript": "^5.5.4",
-    "vitest": "^2.0.5",
-    "yaml": "^2.5.0"
+    "@types/node": "^22.10.2",
+    "@vercel/ncc": "^0.38.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8",
+    "yaml": "^2.6.1"
   },
   "dependencies": {
-    "@actions/core": "^1.10.1",
+    "@actions/core": "^1.11.1",
     "@actions/github": "^6.0.0",
-    "@aws-sdk/client-auto-scaling": "^3.632.0",
-    "@aws-sdk/client-cloudformation": "^3.632.0",
-    "@aws-sdk/client-ec2": "^3.632.0",
-    "@aws-sdk/client-elastic-beanstalk": "^3.632.0",
-    "@aws-sdk/client-elastic-load-balancing-v2": "^3.632.0",
-    "@aws-sdk/client-s3": "^3.633.0",
-    "@aws-sdk/client-ssm": "^3.632.0",
+    "@aws-sdk/client-auto-scaling": "^3.716.0",
+    "@aws-sdk/client-cloudformation": "^3.716.0",
+    "@aws-sdk/client-ec2": "^3.716.0",
+    "@aws-sdk/client-elastic-beanstalk": "^3.716.0",
+    "@aws-sdk/client-elastic-load-balancing-v2": "^3.716.0",
+    "@aws-sdk/client-s3": "^3.717.0",
+    "@aws-sdk/client-ssm": "^3.716.0",
     "ansi-styles": "^6.2.1"
   }
 }
