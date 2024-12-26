@@ -5,7 +5,6 @@ import {
   EnvironmentResourceDescription,
 } from "@aws-sdk/client-elastic-beanstalk";
 import {
-  Action,
   DescribeListenersCommand,
   DescribeRulesCommand,
   DescribeTagsCommand,
@@ -19,12 +18,11 @@ import { getEnvironments } from "./getEnvironments";
 
 export async function removeTargetGroups(inputs: ActionInputs) {
   const { stagingEnv } = await getEnvironments(inputs);
-  const environments = [stagingEnv].filter((env) => !!env);
-  if (environments.length === 0) {
+  if (!stagingEnv) {
     console.warn("Staging environment not found");
     return;
   }
-  const resources = await getEnvironmentResources(environments);
+  const resources = await getEnvironmentResources([stagingEnv]);
   const rules = await getRules(resources);
 
   const { TagDescriptions } = await elbv2Client.send(
@@ -152,6 +150,9 @@ function getCnamePrefix(inputs: ActionInputs, env: EnvironmentDescription) {
   const prefix = env.CNAME.split(
     `.${inputs.aws_region}.elasticbeanstalk.com`
   )[0];
+  if (!prefix) {
+    throw new Error(`No prefix found for: ${env.CNAME}`);
+  }
   return prefix;
 }
 
@@ -266,7 +267,7 @@ async function getRules(resources: EnvironmentResourceDescription[]) {
   const rules = new Map<string, Rule>();
   for (const { ListenerArn } of Listeners) {
     await elbv2Client
-      .send(new DescribeRulesCommand({ ListenerArn: ListenerArn }))
+      .send(new DescribeRulesCommand({ ListenerArn }))
       .then(({ Rules }) => {
         for (const rule of Rules) {
           rules.set(rule.RuleArn, rule);
