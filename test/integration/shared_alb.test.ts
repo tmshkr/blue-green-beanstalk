@@ -70,8 +70,8 @@ beforeAll(async () => {
   }
 
   const { Outputs } = Stacks[0];
-  for (const { ExportName, OutputValue } of Outputs) {
-    cfnImports[ExportName as keyof typeof cfnImports] = OutputValue;
+  for (const { ExportName, OutputValue } of Outputs!) {
+    cfnImports[ExportName as keyof typeof cfnImports] = OutputValue!;
   }
   for (const key in cfnImports) {
     if (!cfnImports[key]) {
@@ -146,6 +146,11 @@ beforeAll(async () => {
     },
     {
       Namespace: "aws:autoscaling:launchconfiguration",
+      OptionName: "DisableIMDSv1",
+      Value: true,
+    },
+    {
+      Namespace: "aws:autoscaling:launchconfiguration",
       OptionName: "IamInstanceProfile",
       Value: "aws-elasticbeanstalk-ec2-role",
     },
@@ -185,7 +190,7 @@ suite(
         expect(Environments).toHaveLength(1);
         const { stagingEnv, prodEnv } = await getEnvironments(inputs);
         expect(stagingEnv).toBeUndefined();
-        expect(prodEnv.EnvironmentId).toEqual(Environments[0].EnvironmentId);
+        expect(prodEnv!.EnvironmentId).toEqual(Environments![0].EnvironmentId);
       });
 
       test("should update the tagged listener rule to point to the correct target group", async () => {
@@ -197,13 +202,13 @@ suite(
 
         let prodTargetGroup: string | undefined;
         let testProdRuleTG: string | undefined;
-        for (const { Conditions, Actions, RuleArn } of Rules) {
-          const { TargetGroupArn } = Actions[0];
+        for (const { Conditions, Actions, RuleArn } of Rules!) {
+          const { TargetGroupArn } = Actions![0];
           if (RuleArn === cfnImports.TestProdListenerRuleArn) {
             testProdRuleTG = TargetGroupArn;
           } else {
-            for (const { HostHeaderConfig } of Conditions) {
-              if (HostHeaderConfig?.Values.includes(prodDomain)) {
+            for (const { HostHeaderConfig } of Conditions!) {
+              if (HostHeaderConfig?.Values!.includes(prodDomain)) {
                 prodTargetGroup = TargetGroupArn;
               }
             }
@@ -237,16 +242,16 @@ suite(
           })
         );
 
-        Environments.sort(
-          (a, b) => a.DateCreated.valueOf() - b.DateCreated.valueOf()
+        Environments!.sort(
+          (a, b) => a.DateCreated!.valueOf() - b.DateCreated!.valueOf()
         );
         expect(Environments).toHaveLength(2);
-        const oldEnv = Environments[0];
-        const newEnv = Environments[1];
+        const oldEnv = Environments![0];
+        const newEnv = Environments![1];
 
         const { stagingEnv, prodEnv } = await getEnvironments(inputs);
-        expect(stagingEnv.EnvironmentId).toEqual(oldEnv.EnvironmentId);
-        expect(prodEnv.EnvironmentId).toEqual(newEnv.EnvironmentId);
+        expect(stagingEnv!.EnvironmentId).toEqual(oldEnv.EnvironmentId);
+        expect(prodEnv!.EnvironmentId).toEqual(newEnv.EnvironmentId);
       });
 
       test("should update both tagged listener rules to point to the correct target groups", async () => {
@@ -260,17 +265,17 @@ suite(
         let stagingTargetGroup: string | undefined;
         let testProdRuleTG: string | undefined;
         let testStagingRuleTG: string | undefined;
-        for (const { Conditions, Actions, RuleArn } of Rules) {
-          const { TargetGroupArn } = Actions[0];
+        for (const { Conditions, Actions, RuleArn } of Rules!) {
+          const { TargetGroupArn } = Actions![0];
           if (RuleArn === cfnImports.TestProdListenerRuleArn) {
             testProdRuleTG = TargetGroupArn;
           } else if (RuleArn === cfnImports.TestStagingListenerRuleArn) {
             testStagingRuleTG = TargetGroupArn;
           } else {
-            for (const { HostHeaderConfig } of Conditions) {
-              if (HostHeaderConfig?.Values.includes(prodDomain)) {
+            for (const { HostHeaderConfig } of Conditions!) {
+              if (HostHeaderConfig?.Values!.includes(prodDomain)) {
                 prodTargetGroup = TargetGroupArn;
-              } else if (HostHeaderConfig?.Values.includes(stagingDomain)) {
+              } else if (HostHeaderConfig?.Values!.includes(stagingDomain)) {
                 stagingTargetGroup = TargetGroupArn;
               }
             }
