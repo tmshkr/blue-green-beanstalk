@@ -3,10 +3,10 @@ import {
   DescribeEnvironmentsCommand,
   TerminateEnvironmentCommand,
 } from "@aws-sdk/client-elastic-beanstalk";
-import { ActionInputs } from "./inputs";
-import { ebClient } from "./clients";
-import { main } from "./main";
-import { spinDownEnvironment } from "./test-utils/spinDownEnvironment";
+import { ActionInputs } from "../../src/inputs";
+import { ebClient } from "../../src/clients";
+import { main } from "../../src/main";
+import { spinDownEnvironment } from "../../src/test-utils/spinDownEnvironment";
 import { randomBytes } from "node:crypto";
 
 const key = randomBytes(3).toString("hex");
@@ -71,7 +71,7 @@ suite(
         );
 
         expect(Environments).toHaveLength(1);
-        expect(Environments[0].CNAME).toEqual(prodDomain);
+        expect(Environments![0].CNAME).toEqual(prodDomain);
       });
     });
 
@@ -84,7 +84,7 @@ suite(
           })
         );
         expect(Environments).toHaveLength(1);
-        expect(Environments[0].CNAME).toEqual(prodDomain);
+        expect(Environments![0].CNAME).toEqual(prodDomain);
       });
 
       // TODOL it should send the command to the target environment and execute it
@@ -99,12 +99,12 @@ suite(
           })
         );
 
-        Environments.sort(
-          (a, b) => a.DateCreated.valueOf() - b.DateCreated.valueOf()
+        Environments!.sort(
+          (a, b) => a.DateCreated!.valueOf() - b.DateCreated!.valueOf()
         );
         expect(Environments).toHaveLength(2);
-        const oldEnv = Environments[0];
-        const newEnv = Environments[1];
+        const oldEnv = Environments![0];
+        const newEnv = Environments![1];
 
         expect(oldEnv.CNAME).toEqual(stagingDomain);
         expect(newEnv.CNAME).toEqual(prodDomain);
@@ -121,12 +121,12 @@ suite(
             })
           )
           .then(({ Environments }) =>
-            Environments.find((env) => env.CNAME === stagingDomain)
+            Environments!.find((env) => env.CNAME === stagingDomain)
           );
 
-        let health = stagingEnv.Health;
+        let health = stagingEnv!.Health;
         if (health !== "Grey") {
-          await spinDownEnvironment(stagingEnv);
+          await spinDownEnvironment(stagingEnv!);
 
           let times = 0;
           while (times < 10) {
@@ -134,11 +134,11 @@ suite(
             health = await ebClient
               .send(
                 new DescribeEnvironmentsCommand({
-                  EnvironmentIds: [stagingEnv.EnvironmentId],
+                  EnvironmentIds: [stagingEnv!.EnvironmentId!],
                 })
               )
               .then(({ Environments }) => {
-                return Environments[0].Health;
+                return Environments![0].Health;
               });
 
             if (health === "Grey") {
