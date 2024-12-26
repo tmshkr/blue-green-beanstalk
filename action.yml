@@ -38,7 +38,7 @@ inputs:
   platform_branch_name:
     description: "Name of the platform branch to use. When creating a new environment, it will be launched with the latest version of the specified platform branch. To see the list of available platform branches, run the `aws elasticbeanstalk list-platform-branches` command."
   production_cname:
-    description: "CNAME prefix for the domain that serves production traffic."
+    description: "CNAME prefix for the domain that serves production traffic when performing a blue/green deployment."
     needs: [blue_env, green_env, staging_cname]
   send_command:
     description: "Command to send to the target environment after (optional) deployment. Specify a shell script or series of commands to run. Useful for running tasks related to deployment, such as swapping environment variables before promoting an environment to production."
@@ -51,7 +51,7 @@ inputs:
   source_bundle:
     description: "Path to the source bundle to deploy. If not specified, the sample application will be used."
   staging_cname:
-    description: "CNAME prefix for the staging environment."
+    description: "CNAME prefix of the staging environment for a blue/green deployment."
     needs: [blue_env, green_env, production_cname]
   swap_cnames:
     description: "Whether to swap the CNAMEs of the blue and green environments."
@@ -66,7 +66,7 @@ inputs:
     default: "true"
   update_listener_rules:
     description: |
-      When set to true, the action will update any elbv2 listener rules on the environments' SharedLoadBalancer tagged with a `bluegreenbeanstalk:target_cname` key, whose value is equal to the staging or production CNAME prefix, so that it forwards to the corresponding target group.
+      When set to true, the action will update any elbv2 listener rules on the environments' SharedLoadBalancer tagged with a `bluegreenbeanstalk:target_cname` key, whose value is equal to an environment's CNAME prefix, so that it forwards to the corresponding target group.
 
       For example, you can tag a listener rule that matches the host `my-domain.com` with a tag containing `bluegreenbeanstalk:target_cname` as its key and `my-prod-cname` as its value, and the action will update the listener rule to point to the same target group as the environment with the CNAME `my-prod-cname`.
 
@@ -74,7 +74,7 @@ inputs:
 
       The port of the process may be specified by another tag with the key `bluegreenbeanstalk:target_port` whose value is the port number. If no such tag is found, the default port of 80 will be used.
 
-      If you'd only like to update the listener rules for a certain environment, you can set this input to the name of the environment you'd like to update.
+      If you'd only like to update the listener rules for a certain CNAME, you can set this input to the CNAME prefix you'd like to update.
     default: "false"
   use_default_option_settings:
     description: "Whether to use default option settings when creating a new environment."
