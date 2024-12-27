@@ -52,7 +52,7 @@ jobs:
       - name: Generate source bundle
         run: zip -r bundle.zip . -x '*.git*'
       - name: Deploy
-        uses: tmshkr/blue-green-beanstalk@v4
+        uses: tmshkr/blue-green-beanstalk@v5
         with:
           app_name: "test-app"
           blue_env: "my-blue-env"
