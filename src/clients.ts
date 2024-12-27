@@ -4,6 +4,7 @@ import { ElasticBeanstalkClient } from "@aws-sdk/client-elastic-beanstalk";
 import { EC2Client } from "@aws-sdk/client-ec2";
 import { ElasticLoadBalancingV2Client } from "@aws-sdk/client-elastic-load-balancing-v2";
 import { S3Client } from "@aws-sdk/client-s3";
+import { SSMClient } from "@aws-sdk/client-ssm";
 
 function getCredentials() {
   const credentials = {
@@ -35,3 +36,4 @@ export const ebClient = new ElasticBeanstalkClient(awsConfig);
 export const ec2Client = new EC2Client(awsConfig);
 export const elbv2Client = new ElasticLoadBalancingV2Client(awsConfig);
 export const s3Client = new S3Client(awsConfig);
+export const ssmClient = new SSMClient(awsConfig);

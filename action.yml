@@ -14,7 +14,7 @@ inputs:
     description: "AWS session token for using temporary credentials. May instead be specified via the AWS_SESSION_TOKEN environment variable."
   blue_env:
     description: "Name of the blue environment."
-    required: true
+    needs: [green_env, production_cname, staging_cname]
   create_environment:
     description: "Whether to create a new environment during deployment if the target environment doesn't exist."
     default: "true"
@@ -29,7 +29,7 @@ inputs:
     default: "false"
   green_env:
     description: "Name of the green environment."
-    required: true
+    needs: [blue_env, production_cname, staging_cname]
   minimum_health_color:
     description: "Minimum health color (Green, Yellow, Red, or Grey) required for the target environment to be considered healthy."
     default: "Green"
@@ -38,13 +38,21 @@ inputs:
   platform_branch_name:
     description: "Name of the platform branch to use. When creating a new environment, it will be launched with the latest version of the specified platform branch. To see the list of available platform branches, run the `aws elasticbeanstalk list-platform-branches` command."
   production_cname:
-    description: "CNAME prefix for the domain that serves production traffic."
-    required: true
+    description: "CNAME prefix for the domain that serves production traffic when performing a blue/green deployment."
+    needs: [blue_env, green_env, staging_cname]
+  send_command:
+    description: "Command to send to the target environment after (optional) deployment. Specify a shell script or series of commands to run. Useful for running tasks related to deployment, such as swapping environment variables before promoting an environment to production."
+  single_env:
+    description: "Name of a single environment to deploy. If specified, the blue/green environments and production/staging CNAMEs must not be provided."
+    needs: [single_env_cname]
+  single_env_cname:
+    description: "CNAME prefix to use for a single-environment deployment."
+    needs: [single_env]
   source_bundle:
     description: "Path to the source bundle to deploy. If not specified, the sample application will be used."
   staging_cname:
-    description: "CNAME prefix for the staging environment."
-    required: true
+    description: "CNAME prefix of the staging environment for a blue/green deployment."
+    needs: [blue_env, green_env, production_cname]
   swap_cnames:
     description: "Whether to swap the CNAMEs of the blue and green environments."
     default: "false"
@@ -52,12 +60,21 @@ inputs:
     description: "Name of an Elastic Beanstalk configuration template to use when creating a new environment."
   terminate_unhealthy_environment:
     description: "Whether to terminate an unhealthy target environment. If set to false, the action will fail if the target environment is unhealthy."
-    default: "true"
+    default: "false"
   update_environment:
     description: "Whether to update an existing environment during deployment."
     default: "true"
   update_listener_rules:
-    description: "When set to true, the action will update any elbv2 listener rules on the environments' SharedLoadBalancer tagged with a `bluegreenbeanstalk:target_cname` key, whose value is equal to the staging or production CNAME prefix, so that it forwards to the corresponding target group. The action will also remove any target group from the listener before terminating the environment. The port of the process may be specified by another tag with the key `bluegreenbeanstalk:target_port` whose value is the port number. If no such tag is found, the default port of 80 will be used."
+    description: |
+      When set to true, the action will update any elbv2 listener rules on the environments' SharedLoadBalancer tagged with a `bluegreenbeanstalk:target_cname` key, whose value is equal to an environment's CNAME prefix, so that it forwards to the corresponding target group.
+
+      For example, you can tag a listener rule that matches the host `my-domain.com` with a tag containing `bluegreenbeanstalk:target_cname` as its key and `my-prod-cname` as its value, and the action will update the listener rule to point to the same target group as the environment with the CNAME `my-prod-cname`.
+
+      The listener rules are updated after the CNAMEs are swapped, so this keeps the listener rules in sync with the CNAMEs.
+
+      The port of the process may be specified by another tag with the key `bluegreenbeanstalk:target_port` whose value is the port number. If no such tag is found, the default port of 80 will be used.
+
+      If you'd only like to update the listener rules for a certain CNAME, you can set this input to the CNAME prefix you'd like to update.
     default: "false"
   use_default_option_settings:
     description: "Whether to use default option settings when creating a new environment."
@@ -66,6 +83,9 @@ inputs:
     description: "Description to use for the new application version."
   version_label:
     description: "Version label to use for the new application version."
+  wait_for_command:
+    description: "Whether to wait for the send_command execution to complete."
+    default: "true"
   wait_for_deployment:
     description: "Whether to wait for the deployment to complete."
     default: "true"

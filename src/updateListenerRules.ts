@@ -5,7 +5,6 @@ import {
   EnvironmentResourceDescription,
 } from "@aws-sdk/client-elastic-beanstalk";
 import {
-  Action,
   DescribeListenersCommand,
   DescribeRulesCommand,
   DescribeTagsCommand,
@@ -14,54 +13,42 @@ import {
   Rule,
 } from "@aws-sdk/client-elastic-load-balancing-v2";
 import { asClient, ebClient, elbv2Client } from "./clients";
-import { ActionInputs } from "./inputs";
+import { ActionInputs, mapHealthColorToInt } from "./inputs";
 import { getEnvironments } from "./getEnvironments";
-
-interface TargetGroupARNsByPortByCname {
-  [cname: string]: { [port: number]: string };
-}
-
-interface RulesByArn {
-  [arn: string]: Rule;
-}
 
 export async function removeTargetGroups(inputs: ActionInputs) {
   const { stagingEnv } = await getEnvironments(inputs);
-  const environments = [stagingEnv].filter((env) => !!env);
-  const resources = await getEnvironmentResources(environments);
+  if (!stagingEnv) {
+    console.warn("Staging environment not found");
+    return;
+  }
+  const resources = await getEnvironmentResources([stagingEnv]);
   const rules = await getRules(resources);
 
   const { TagDescriptions } = await elbv2Client.send(
     new DescribeTagsCommand({
-      ResourceArns: Object.keys(rules),
+      ResourceArns: Array.from(rules.keys()),
     })
   );
 
-  const handleActions = (actions: Action[]) => {
-    actions[actions.length - 1] = {
-      Type: "fixed-response",
-      FixedResponseConfig: {
-        ContentType: "text/plain",
-        MessageBody: "Environment not available",
-        StatusCode: "404",
-      },
-    };
-    return actions;
-  };
-
   for (const { Tags, ResourceArn } of TagDescriptions) {
-    const rule = rules[ResourceArn];
+    const rule = rules.get(ResourceArn);
+    if (!rule) throw new Error(`No rule found for: ${ResourceArn}`);
     for (const { Key, Value } of Tags) {
       if (
         Key === "bluegreenbeanstalk:target_cname" &&
-        Value === inputs.stagingCNAME
+        Value === inputs.staging_cname
       ) {
-        await elbv2Client.send(
-          new ModifyRuleCommand({
-            RuleArn: ResourceArn,
-            Actions: handleActions(rule.Actions),
-          })
-        );
+        const { Actions, RuleArn } = rule;
+        Actions[Actions.length - 1] = {
+          Type: "fixed-response",
+          FixedResponseConfig: {
+            ContentType: "text/plain",
+            MessageBody: "Environment not available",
+            StatusCode: "503",
+          },
+        };
+        await elbv2Client.send(new ModifyRuleCommand({ RuleArn, Actions }));
         console.log(`Updated rule:`, rule.RuleArn);
       }
     }
@@ -70,77 +57,90 @@ export async function removeTargetGroups(inputs: ActionInputs) {
 
 export async function updateTargetGroups(inputs: ActionInputs) {
   console.log("Updating listener rules...");
-  const { prodEnv, stagingEnv } = await getEnvironments(inputs);
-  const environments = [prodEnv, stagingEnv].filter((env) => {
+  const { prodEnv, stagingEnv, singleEnv } = await getEnvironments(inputs);
+  const environments = [prodEnv, stagingEnv, singleEnv].filter((env) => {
     if (!env) return false;
+    if (
+      inputs.update_listener_rules_cname !== "true" &&
+      inputs.update_listener_rules_cname !== getCnamePrefix(inputs, env)
+    ) {
+      return false;
+    }
+
     if (env.Status !== "Ready") {
       console.log(`[${env.EnvironmentName}]: Status is ${env.Status}`);
       console.log(`[${env.EnvironmentName}]: Skipping...`);
       return false;
     }
 
-    if (env.Health === "Green") {
-      return true;
+    if (mapHealthColorToInt(env.Health) < inputs.minimum_health_color) {
+      console.warn(`[${env.EnvironmentName}]: Health is ${env.Health}`);
+      console.log(`[${env.EnvironmentName}]: Skipping...`);
+      return false;
     }
 
-    console.warn(`[${env.EnvironmentName}]: Health is ${env.Health}`);
-    if (env.Health === "Yellow") {
-      return true;
-    }
-
-    console.log(`[${env.EnvironmentName}]: Skipping...`);
-    return false;
+    return true;
   });
+
+  if (environments.length === 0) {
+    console.warn("No environments available for updating listener rules");
+    return;
+  }
 
   const resources = await getEnvironmentResources(environments);
   const rules = await getRules(resources);
+  if (rules.size === 0) {
+    console.warn("No rules found");
+    return;
+  }
   const targetGroupARNs = await findTargetGroupArns(
     inputs,
     environments,
     resources
   );
+  if (targetGroupARNs.size === 0) {
+    console.warn("No target groups found");
+    return;
+  }
 
   const { TagDescriptions } = await elbv2Client.send(
     new DescribeTagsCommand({
-      ResourceArns: Object.keys(rules),
+      ResourceArns: Array.from(rules.keys()),
     })
   );
 
-  const handleActions = (actions: Action[], targetGroupArn) => {
-    actions[actions.length - 1] = {
-      Type: "forward",
-      TargetGroupArn: targetGroupArn,
-    };
-    return actions;
-  };
-
   for (const { Tags, ResourceArn } of TagDescriptions) {
-    const rule = rules[ResourceArn];
+    const rule = rules.get(ResourceArn);
+    if (!rule) throw new Error(`No rule found for: ${ResourceArn}`);
     const cname = Tags.find(
       ({ Key }) => Key === "bluegreenbeanstalk:target_cname"
     )?.Value;
 
-    if (![inputs.stagingCNAME, inputs.productionCNAME].includes(cname))
-      continue;
+    if (!cname) continue;
 
     const port =
       Tags.find(({ Key }) => Key === "bluegreenbeanstalk:target_port")?.Value ||
       80;
 
-    const targetGroupArn = targetGroupARNs[cname]?.[port];
+    const targetGroupArn = targetGroupARNs.get(`${cname}:${port}`);
     if (targetGroupArn) {
-      await elbv2Client.send(
-        new ModifyRuleCommand({
-          RuleArn: ResourceArn,
-          Actions: handleActions(rule.Actions, targetGroupArn),
-        })
-      );
-
-      console.log(`Updated rule:`, rule.RuleArn);
-    } else {
-      console.warn(
-        `No target group available for ${cname} on rule:`,
-        rule.RuleArn
+      const { Actions, RuleArn } = rule;
+      Actions[Actions.length - 1] = {
+        Type: "forward",
+        ForwardConfig: {
+          TargetGroups: [
+            {
+              TargetGroupArn: targetGroupArn,
+              Weight: 1,
+            },
+          ],
+          TargetGroupStickinessConfig: { Enabled: false },
+        },
+      };
+      await elbv2Client.send(new ModifyRuleCommand({ RuleArn, Actions }));
+      console.log(`Updated rule:`);
+      console.log(
+        `https://${inputs.aws_region}.console.aws.amazon.com/ec2/home?region=${inputs.aws_region}#ListenerRuleDetails:ruleArn=${rule.RuleArn}`
       );
     }
   }
@@ -148,10 +148,10 @@ export async function updateTargetGroups(inputs: ActionInputs) {
 
 function getCnamePrefix(inputs: ActionInputs, env: EnvironmentDescription) {
   const prefix = env.CNAME.split(
-    `.${inputs.awsRegion}.elasticbeanstalk.com`
+    `.${inputs.aws_region}.elasticbeanstalk.com`
   )[0];
-  if (![inputs.productionCNAME, inputs.stagingCNAME].includes(prefix)) {
-    throw new Error(`Unexpected CNAME: ${prefix}`);
+  if (!prefix) {
+    throw new Error(`No prefix found for: ${env.CNAME}`);
   }
   return prefix;
 }
@@ -161,59 +161,55 @@ async function findTargetGroupArns(
   environments: EnvironmentDescription[],
   resources: EnvironmentResourceDescription[]
 ) {
-  const result: TargetGroupARNsByPortByCname = {};
+  const mapEnvironmentIdToCname = new Map<string, string>();
   for (const env of environments) {
-    const prefix = getCnamePrefix(inputs, env);
-    result[prefix] = {};
+    mapEnvironmentIdToCname.set(env.EnvironmentId, getCnamePrefix(inputs, env));
   }
 
-  const get = async (
-    inputs: ActionInputs,
-    env: EnvironmentDescription,
-    resourceDescription: EnvironmentResourceDescription
-  ) => {
-    const { AutoScalingGroups } = await asClient.send(
-      new DescribeAutoScalingGroupsCommand({
-        AutoScalingGroupNames: resourceDescription.AutoScalingGroups.map(
-          ({ Name }) => Name
-        ),
-      })
-    );
-
-    const targetGroupARNs = new Set<string>();
-    for (const { TargetGroupARNs } of AutoScalingGroups) {
-      for (const arn of TargetGroupARNs) {
-        targetGroupARNs.add(arn);
-      }
-    }
-
-    const CNAME = getCnamePrefix(inputs, env);
-    await elbv2Client
-      .send(
-        new DescribeTargetGroupsCommand({
-          TargetGroupArns: Array.from(targetGroupARNs),
-        })
-      )
-      .then(({ TargetGroups }) => {
-        for (const { Port, TargetGroupArn } of TargetGroups) {
-          result[CNAME][Port] = TargetGroupArn;
-        }
-      });
-  };
-
-  await Promise.all(
-    resources.map((resourceDescription) =>
-      get(
-        inputs,
-        environments.find(
-          (env) => env.EnvironmentName === resourceDescription.EnvironmentName
-        ),
-        resourceDescription
-      )
-    )
+  const { AutoScalingGroups } = await asClient.send(
+    new DescribeAutoScalingGroupsCommand({
+      AutoScalingGroupNames: resources.flatMap(({ AutoScalingGroups }) =>
+        AutoScalingGroups.map(({ Name }) => Name)
+      ),
+    })
   );
 
-  return result;
+  /* (Target Group ARN => EB Environment ID) */
+  const mapTargetGroupArnToEnvironmentId = new Map<string, string>();
+  for (const { Tags, TargetGroupARNs } of AutoScalingGroups) {
+    for (const { Key, Value } of Tags) {
+      if (Key === "elasticbeanstalk:environment-id") {
+        for (const arn of TargetGroupARNs) {
+          mapTargetGroupArnToEnvironmentId.set(arn, Value);
+        }
+      }
+    }
+  }
+
+  const { TargetGroups } = await elbv2Client.send(
+    new DescribeTargetGroupsCommand({
+      TargetGroupArns: AutoScalingGroups.flatMap(
+        ({ TargetGroupARNs }) => TargetGroupARNs
+      ),
+    })
+  );
+
+  /* (CNAME:PORT => Target Group ARN) */
+  const targetGroupsByCname = new Map<string, string>();
+  for (const { Port, TargetGroupArn } of TargetGroups) {
+    const envId = mapTargetGroupArnToEnvironmentId.get(TargetGroupArn);
+    if (!envId)
+      throw new Error(
+        `No environment found for Target Group: ${TargetGroupArn}`
+      );
+
+    const cname = mapEnvironmentIdToCname.get(envId);
+    if (cname) {
+      targetGroupsByCname.set(`${cname}:${Port}`, TargetGroupArn);
+    }
+  }
+
+  return targetGroupsByCname;
 }
 
 async function getEnvironmentResources(environments: EnvironmentDescription[]) {
@@ -221,20 +217,19 @@ async function getEnvironmentResources(environments: EnvironmentDescription[]) {
     throw new Error("No environments provided");
   }
 
-  const resources: EnvironmentResourceDescription[] = [];
-  const get = async (env: EnvironmentDescription) => {
-    await ebClient
-      .send(
-        new DescribeEnvironmentResourcesCommand({
-          EnvironmentId: env.EnvironmentId,
+  const resources = await Promise.all(
+    environments.map((env) =>
+      ebClient
+        .send(
+          new DescribeEnvironmentResourcesCommand({
+            EnvironmentId: env.EnvironmentId,
+          })
+        )
+        .then(({ EnvironmentResources }) => {
+          return EnvironmentResources;
         })
-      )
-      .then(({ EnvironmentResources }) => {
-        resources.push(EnvironmentResources);
-      });
-  };
-
-  await Promise.all(environments.map((env) => get(env)));
+    )
+  );
 
   if (resources.length === 0) {
     throw new Error("No resources found");
@@ -269,21 +264,16 @@ async function getRules(resources: EnvironmentResourceDescription[]) {
     })
   );
 
-  const rules: Rule[] = [];
+  const rules = new Map<string, Rule>();
   for (const { ListenerArn } of Listeners) {
     await elbv2Client
-      .send(new DescribeRulesCommand({ ListenerArn: ListenerArn }))
+      .send(new DescribeRulesCommand({ ListenerArn }))
       .then(({ Rules }) => {
         for (const rule of Rules) {
-          rules.push(rule);
+          rules.set(rule.RuleArn, rule);
         }
       });
   }
 
-  const rulesByArn: RulesByArn = {};
-  for (const rule of rules) {
-    rulesByArn[rule.RuleArn] = rule;
-  }
-
-  return rulesByArn;
+  return rules;
 }

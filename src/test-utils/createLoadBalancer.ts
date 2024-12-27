@@ -29,7 +29,7 @@ export async function createLoadBalancer(inputs: ActionInputs) {
   const alb = await elbv2Client
     .send(
       new CreateLoadBalancerCommand({
-        Name: inputs.appName.slice(0, 32),
+        Name: inputs.app_name.slice(0, 32),
         Subnets: defaultSubnets,
         Type: "application",
       })
@@ -77,7 +77,7 @@ export async function createLoadBalancer(inputs: ActionInputs) {
       Tags: [
         {
           Key: "bluegreenbeanstalk:target_cname",
-          Value: inputs.productionCNAME,
+          Value: inputs.production_cname,
         },
       ],
     })
@@ -104,7 +104,7 @@ export async function createLoadBalancer(inputs: ActionInputs) {
         },
       ],
       Tags: [
-        { Key: "bluegreenbeanstalk:target_cname", Value: inputs.stagingCNAME },
+        { Key: "bluegreenbeanstalk:target_cname", Value: inputs.staging_cname },
       ],
     })
   );

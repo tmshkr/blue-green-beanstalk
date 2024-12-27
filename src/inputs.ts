@@ -1,62 +1,69 @@
-import * as core from "@actions/core";
+import { getBooleanInput, getInput, setFailed } from "@actions/core";
 export type ActionInputs = ReturnType<typeof getInputs>;
-const fs = require("fs");
+import { readFileSync } from "fs";
 
 export function getInputs() {
   const inputs = {
-    appName: core.getInput("app_name", { required: true }),
-    awsRegion:
-      core.getInput("aws_region") ||
+    app_name: getInput("app_name", { required: true }),
+    aws_region:
+      getInput("aws_region") ||
       process.env.AWS_REGION ||
       process.env.AWS_DEFAULT_REGION,
-    blueEnv: core.getInput("blue_env", { required: true }),
-    createEnvironment: core.getBooleanInput("create_environment", {
+    blue_env: getInput("blue_env"),
+    create_environment: getBooleanInput("create_environment", {
       required: true,
     }),
-    deploy: core.getBooleanInput("deploy", { required: true }),
-    disableTerminationProtection: core.getBooleanInput(
+    deploy: getBooleanInput("deploy", { required: true }),
+    disable_termination_protection: getBooleanInput(
       "disable_termination_protection"
     ),
-    enableTerminationProtection: core.getBooleanInput(
+    enable_termination_protection: getBooleanInput(
       "enable_termination_protection"
     ),
-    greenEnv: core.getInput("green_env", { required: true }),
-    minimumHealthColor: mapHealthColorToInt(
-      core.getInput("minimum_health_color", {
+    green_env: getInput("green_env"),
+    minimum_health_color: mapHealthColorToInt(
+      getInput("minimum_health_color", {
         required: true,
       })
     ),
-    optionSettings: core.getInput("option_settings")
-      ? JSON.parse(fs.readFileSync(core.getInput("option_settings")))
+    option_settings: getInput("option_settings")
+      ? JSON.parse(readFileSync(getInput("option_settings"), "utf8"))
       : undefined,
-    platformBranchName: core.getInput("platform_branch_name"),
-    productionCNAME: core.getInput("production_cname", { required: true }),
-    sourceBundle: core.getInput("source_bundle") || undefined,
-    stagingCNAME: core.getInput("staging_cname", { required: true }),
-    swapCNAMEs: core.getBooleanInput("swap_cnames", { required: true }),
-    templateName: core.getInput("template_name") || undefined,
-    terminateUnhealthyEnvironment: core.getBooleanInput(
+    platform_branch_name: getInput("platform_branch_name"),
+    production_cname: getInput("production_cname"),
+    send_command: getInput("send_command") || undefined,
+    source_bundle: getInput("source_bundle") || undefined,
+    staging_cname: getInput("staging_cname"),
+    swap_cnames: getBooleanInput("swap_cnames", { required: true }),
+    single_env: getInput("single_env") || undefined,
+    single_env_cname: getInput("single_env_cname") || undefined,
+    template_name: getInput("template_name") || undefined,
+    terminate_unhealthy_environment: getBooleanInput(
       "terminate_unhealthy_environment",
       { required: true }
     ),
-    updateEnvironment: core.getBooleanInput("update_environment", {
+    update_environment: getBooleanInput("update_environment", {
       required: true,
     }),
-    updateListenerRules: core.getBooleanInput("update_listener_rules", {
+    update_listener_rules: getBooleanInput("update_listener_rules", {
       required: true,
     }),
-    versionDescription: core.getInput("version_description") || undefined,
-    versionLabel: core.getInput("version_label") || undefined,
-    waitForDeployment: core.getBooleanInput("wait_for_deployment", {
+    update_listener_rules_cname: getInput("update_listener_rules", {
       required: true,
     }),
-    waitForEnvironment: core.getBooleanInput("wait_for_environment", {
+    version_description: getInput("version_description") || undefined,
+    version_label: getInput("version_label") || undefined,
+    wait_for_command: getBooleanInput("wait_for_command"),
+    wait_for_deployment: getBooleanInput("wait_for_deployment", {
       required: true,
     }),
-    waitForTermination: core.getBooleanInput("wait_for_termination", {
+    wait_for_environment: getBooleanInput("wait_for_environment", {
       required: true,
     }),
-    useDefaultOptionSettings: core.getBooleanInput(
+    wait_for_termination: getBooleanInput("wait_for_termination", {
+      required: true,
+    }),
+    use_default_option_settings: getBooleanInput(
       "use_default_option_settings",
       {
         required: true,
@@ -67,31 +74,58 @@ export function getInputs() {
   try {
     checkInputs(inputs);
   } catch (err) {
-    core.setFailed(err.message);
+    setFailed(err.message);
     throw err;
   }
   return inputs;
 }
 
 export function checkInputs(inputs: ActionInputs) {
-  if (!inputs.awsRegion) {
+  if (!inputs.aws_region) {
     throw new Error("aws_region must be provided");
   }
-
-  if (inputs.blueEnv === inputs.greenEnv) {
-    throw new Error("blue_env and green_env must be different");
-  }
-
-  if (!inputs.versionLabel && inputs.sourceBundle) {
+  if (!inputs.version_label && inputs.source_bundle) {
     throw new Error("source_bundle must be provided with a version_label");
   }
 
-  if (inputs.productionCNAME === inputs.stagingCNAME) {
-    throw new Error("production_cname and staging_cname must be different");
+  if (inputs.option_settings && !Array.isArray(inputs.option_settings)) {
+    throw new Error("option_settings must be an array");
   }
 
-  if (inputs.optionSettings && !Array.isArray(inputs.optionSettings)) {
-    throw new Error("option_settings must be an array");
+  if (inputs.single_env || inputs.single_env_cname) {
+    if (!inputs.single_env || !inputs.single_env_cname) {
+      throw new Error(
+        "single_env and single_env_cname must be provided together"
+      );
+    }
+    if (
+      inputs.blue_env ||
+      inputs.green_env ||
+      inputs.production_cname ||
+      inputs.staging_cname
+    ) {
+      throw new Error(
+        "blue_env, green_env, production_cname, and staging_cname must not be provided when using a single environment"
+      );
+    }
+  } else {
+    // blue/green input checks
+    if (
+      !inputs.blue_env ||
+      !inputs.green_env ||
+      !inputs.production_cname ||
+      !inputs.staging_cname
+    ) {
+      throw new Error(
+        "blue_env, green_env, production_cname, and staging_cname must be provided together"
+      );
+    }
+    if (inputs.blue_env === inputs.green_env) {
+      throw new Error("blue_env and green_env must be different");
+    }
+    if (inputs.production_cname === inputs.staging_cname) {
+      throw new Error("production_cname and staging_cname must be different");
+    }
   }
 }
 

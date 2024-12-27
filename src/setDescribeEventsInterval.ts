@@ -1,17 +1,26 @@
 import {
   DescribeEventsCommand,
+  EnvironmentDescription,
   EventDescription,
+  EventSeverity,
 } from "@aws-sdk/client-elastic-beanstalk";
 import { ebClient } from "./clients";
+import { ActionInputs } from "./inputs";
+import styles from "ansi-styles";
 
-export function setDescribeEventsInterval(
-  environmentId: string,
-  startTime = new Date()
-): NodeJS.Timeout {
+export function setDescribeEventsInterval({
+  environment,
+  inputs,
+  startTime = new Date(),
+}: {
+  environment: EnvironmentDescription;
+  inputs: ActionInputs;
+  startTime?: Date;
+}): NodeJS.Timeout {
   return setInterval(async () => {
     let { Events } = await ebClient.send(
       new DescribeEventsCommand({
-        EnvironmentId: environmentId,
+        EnvironmentId: environment.EnvironmentId,
         StartTime: startTime,
       })
     );
@@ -19,20 +28,56 @@ export function setDescribeEventsInterval(
     Events = Events.filter((event) => event.EventDate > startTime);
     if (Events.length > 0) {
       startTime = Events[0].EventDate;
-      for (const e of Events.reverse()) {
-        console.log(
-          `[${e.EnvironmentName}]: ${printUTCTime(e.EventDate)} ${e.Severity} ${
-            e.Message
-          }`
-        );
-        if (e.Severity === "ERROR") {
-          throw new Error(e.Message);
-        }
+      for (const event of Events.reverse()) {
+        log(inputs, event);
       }
     } else {
       console.log(".");
     }
   }, 10000);
+}
+
+function log(inputs: ActionInputs, event: EventDescription) {
+  let color;
+  switch (event.EnvironmentName) {
+    case inputs.blue_env:
+      color = styles.blue;
+      break;
+    case inputs.green_env:
+      color = styles.green;
+      break;
+    case inputs.single_env:
+      color = styles.magenta;
+      break;
+    default:
+      break;
+  }
+  switch (event.Severity) {
+    case EventSeverity.TRACE:
+    case EventSeverity.DEBUG:
+      color = styles.gray;
+      break;
+    case EventSeverity.WARN:
+      color = styles.yellow;
+      break;
+    case EventSeverity.ERROR:
+    case EventSeverity.FATAL:
+      color = styles.red;
+      break;
+    default:
+      break;
+  }
+  console.log(
+    `${color.open}[${event.EnvironmentName}]: ${printUTCTime(
+      event.EventDate
+    )} ${event.Severity} ${event.Message}${color.close}`
+  );
+  if (
+    event.Severity === EventSeverity.ERROR ||
+    event.Severity === EventSeverity.FATAL
+  ) {
+    throw new Error(event.Message);
+  }
 }
 
 function printUTCTime(date: Date) {

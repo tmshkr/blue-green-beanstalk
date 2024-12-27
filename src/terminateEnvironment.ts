@@ -13,17 +13,17 @@ export async function terminateEnvironment(
   inputs: ActionInputs,
   env: EnvironmentDescription
 ) {
-  if (!inputs.terminateUnhealthyEnvironment) {
+  if (!inputs.terminate_unhealthy_environment) {
     throw new Error(
       "Target environment is unhealthy and terminate_unhealthy_environment is false. Exiting..."
     );
   }
 
-  if (inputs.updateListenerRules) {
+  if (inputs.update_listener_rules) {
     await removeTargetGroups(inputs);
   }
 
-  if (inputs.disableTerminationProtection) {
+  if (inputs.disable_termination_protection) {
     await disableTerminationProtection(env);
   }
 
@@ -37,8 +37,12 @@ export async function terminateEnvironment(
     })
   );
 
-  if (inputs.waitForTermination) {
-    const interval = setDescribeEventsInterval(env.EnvironmentId, startTime);
+  if (inputs.wait_for_termination) {
+    const interval = setDescribeEventsInterval({
+      inputs,
+      environment: env,
+      startTime,
+    });
     await waitUntilEnvironmentTerminated(
       { client: ebClient, maxWaitTime: 60 * 10, minDelay: 5, maxDelay: 30 },
       { EnvironmentIds: [env.EnvironmentId] }
