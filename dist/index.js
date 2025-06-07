@@ -192435,8 +192435,10 @@ function getRules(resources) {
                 loadBalancerArns.add(Name);
             }
         }
+        const rules = new Map();
         if (loadBalancerArns.size === 0) {
-            throw new Error("No load balancers found");
+            console.warn("No load balancers found");
+            return rules;
         }
         if (loadBalancerArns.size > 1) {
             throw new Error("Environments must use the same load balancer");
@@ -192444,7 +192446,6 @@ function getRules(resources) {
         const { Listeners } = yield elbv2Client.send(new client_elastic_load_balancing_v2_dist_cjs.DescribeListenersCommand({
             LoadBalancerArn: Array.from(loadBalancerArns)[0],
         }));
-        const rules = new Map();
         for (const { ListenerArn } of Listeners) {
             yield elbv2Client
                 .send(new client_elastic_load_balancing_v2_dist_cjs.DescribeRulesCommand({ ListenerArn }))
