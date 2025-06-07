@@ -251,9 +251,13 @@ async function getRules(resources: EnvironmentResourceDescription[]) {
     }
   }
 
+  const rules = new Map<string, Rule>();
+
   if (loadBalancerArns.size === 0) {
-    throw new Error("No load balancers found");
+    console.warn("No load balancers found");
+    return rules;
   }
+
   if (loadBalancerArns.size > 1) {
     throw new Error("Environments must use the same load balancer");
   }
@@ -264,7 +268,7 @@ async function getRules(resources: EnvironmentResourceDescription[]) {
     })
   );
 
-  const rules = new Map<string, Rule>();
+
   for (const { ListenerArn } of Listeners) {
     await elbv2Client
       .send(new DescribeRulesCommand({ ListenerArn }))
